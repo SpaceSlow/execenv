@@ -3,17 +3,13 @@ package metrics
 import "strconv"
 
 type Metric struct {
-	Name  string
 	Type  MetricType
+	Name  string
 	Value string
 }
 
-func NewMetric(mT, name, value string) (*Metric, error) {
-	metricType, err := parseMetricType(mT)
-	if err != nil {
-		return nil, &IncorrectMetricTypeOrValueError{}
-	}
-
+func NewMetric(metricType MetricType, name, value string) (*Metric, error) {
+	var err error
 	switch metricType {
 	case Counter:
 		_, err = strconv.ParseInt(value, 10, 64)
@@ -25,5 +21,5 @@ func NewMetric(mT, name, value string) (*Metric, error) {
 		return nil, &IncorrectMetricTypeOrValueError{}
 	}
 
-	return &Metric{name, metricType, value}, nil
+	return &Metric{metricType, name, value}, nil
 }

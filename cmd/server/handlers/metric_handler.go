@@ -2,14 +2,14 @@ package handlers
 
 import (
 	"errors"
-	"net/http"
-
 	"github.com/SpaceSlow/execenv/cmd/server/metrics"
 	"github.com/SpaceSlow/execenv/cmd/server/storages"
+	"net/http"
 )
 
 type MetricHandler struct {
-	Storage storages.Storage
+	MetricType metrics.MetricType
+	Storage    storages.Storage
 }
 
 func (h MetricHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
@@ -18,7 +18,7 @@ func (h MetricHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	metric, err := metrics.ParseMetricFromURL(req.URL.String())
+	metric, err := metrics.ParseMetricFromURL(req.URL.String(), h.MetricType)
 	if errors.Is(err, &metrics.IncorrectMetricTypeOrValueError{}) {
 		res.WriteHeader(http.StatusBadRequest)
 		return
