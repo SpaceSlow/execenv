@@ -1,7 +1,6 @@
 package storages
 
 import (
-	"strconv"
 	"sync"
 
 	"github.com/SpaceSlow/execenv/cmd/metrics"
@@ -9,11 +8,11 @@ import (
 
 type MemStorage struct {
 	mu      sync.Mutex
-	metrics map[string]string
+	metrics map[string]interface{}
 }
 
 func NewMemStorage() *MemStorage {
-	return &MemStorage{metrics: make(map[string]string)}
+	return &MemStorage{metrics: make(map[string]interface{})}
 }
 
 func (storage *MemStorage) Add(metric *metrics.Metric) error {
@@ -22,13 +21,40 @@ func (storage *MemStorage) Add(metric *metrics.Metric) error {
 
 	switch metric.Type {
 	case metrics.Counter:
-		prevValue, _ := strconv.ParseInt(storage.metrics[metric.Name], 10, 64)
+		prevValue, _ := storage.metrics[metric.Name].(int64)
 		value, _ := metric.Value.(int64)
-		storage.metrics[metric.Name] = strconv.FormatInt(prevValue+value, 10)
+		storage.metrics[metric.Name] = prevValue + value
 	case metrics.Gauge:
-		storage.metrics[metric.Name], _ = metric.Value.(string)
+		value, _ := metric.Value.(float64)
+		storage.metrics[metric.Name] = value
 	default:
 		return &metrics.IncorrectMetricTypeOrValueError{}
 	}
 	return nil
+}
+
+func (storage *MemStorage) Get(name string) (metrics.Metric, bool) {
+	storage.mu.Lock()
+	defer storage.mu.Unlock()
+
+	value, ok := storage.metrics[name]
+	if !ok {
+		return metrics.Metric{}, false
+	}
+
+	var metricType metrics.MetricType
+	switch value.(type) {
+	case float64:
+		metricType = metrics.Gauge
+	case int64:
+		metricType = metrics.Counter
+	default:
+		return metrics.Metric{}, false
+	}
+
+	return metrics.Metric{
+		Type:  metricType,
+		Name:  name,
+		Value: value,
+	}, true
 }

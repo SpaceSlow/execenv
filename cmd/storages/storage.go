@@ -6,4 +6,5 @@ import (
 
 type Storage interface {
 	Add(metric *metrics.Metric) error
+	Get(name string) (metrics.Metric, bool)
 }

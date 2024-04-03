@@ -1,35 +1,46 @@
 package main
 
 import (
-	"sync"
+	"math/rand"
 	"time"
 
 	"github.com/SpaceSlow/execenv/cmd/metrics"
 )
 
 const (
-	pollInterval   = time.Duration(2)
-	reportInterval = time.Duration(10)
+	pollInterval   = 2 * time.Second
+	reportInterval = 10 * time.Second
 )
 
 func main() {
 	var metricSlice []metrics.Metric
-	var mu sync.Mutex
+	url := "http://localhost:8080/update"
 
-	pollTicker := time.NewTicker(time.Second * pollInterval)
-	defer pollTicker.Stop()
-	reportTicker := time.NewTicker(time.Second * reportInterval)
-	defer reportTicker.Stop()
-	for {
-		select {
-		case <-pollTicker.C:
-			mu.Lock()
-			metricSlice = metrics.GetMetrics()
-			mu.Unlock()
-		case <-reportTicker.C:
-			mu.Lock()
-			metrics.SendMetrics(metricSlice)
-			mu.Unlock()
+	pollCount := 0
+
+	for controlInterval := reportInterval; ; controlInterval -= pollInterval {
+		if controlInterval <= time.Duration(0) {
+			metrics.SendMetrics(url, metricSlice)
+			pollCount = 0
+			controlInterval = reportInterval
 		}
+
+		pollCount++
+		metricSlice = metrics.GetRuntimeMetrics()
+		metricSlice = append(
+			metricSlice,
+			metrics.Metric{
+				Type:  metrics.Gauge,
+				Name:  "RandomValue",
+				Value: rand.Float64(),
+			},
+			metrics.Metric{
+				Type:  metrics.Counter,
+				Name:  "PollCount",
+				Value: pollCount,
+			},
+		)
+
+		time.Sleep(pollInterval)
 	}
 }
