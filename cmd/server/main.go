@@ -11,7 +11,7 @@ import (
 func runServer() error {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/", handlers.DefaultHandler)
+	mux.HandleFunc("/", handlers.DefaultHandlerFunc)
 	mux.Handle("/update/counter/", http.StripPrefix("/update/counter/", handlers.MetricHandler{
 		MetricType: metrics.Counter,
 		Storage:    storages.NewMemStorage(),
