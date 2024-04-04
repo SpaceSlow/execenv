@@ -22,10 +22,16 @@ func (storage *MemStorage) Add(metric *metrics.Metric) error {
 	switch metric.Type {
 	case metrics.Counter:
 		prevValue, _ := storage.metrics[metric.Name].(int64)
-		value, _ := metric.Value.(int64)
+		value, ok := metric.Value.(int64)
+		if !ok {
+			return &metrics.IncorrectMetricTypeOrValueError{}
+		}
 		storage.metrics[metric.Name] = prevValue + value
 	case metrics.Gauge:
-		value, _ := metric.Value.(float64)
+		value, ok := metric.Value.(float64)
+		if !ok {
+			return &metrics.IncorrectMetricTypeOrValueError{}
+		}
 		storage.metrics[metric.Name] = value
 	default:
 		return &metrics.IncorrectMetricTypeOrValueError{}
