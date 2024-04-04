@@ -2,14 +2,14 @@ package handlers
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/SpaceSlow/execenv/cmd/metrics"
 	"github.com/SpaceSlow/execenv/cmd/storages"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMetricHandler_ServeHTTP(t *testing.T) {

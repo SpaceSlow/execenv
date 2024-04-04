@@ -1,11 +1,11 @@
 package storages
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"testing"
 
 	"github.com/SpaceSlow/execenv/cmd/metrics"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMemStorage_Add(t *testing.T) {
@@ -145,7 +145,7 @@ func TestMemStorage_Add(t *testing.T) {
 			}
 
 			value, ok := storage.metrics[test.fields.metric.Name]
-			
+
 			require.True(t, ok)
 			assert.Equal(t, test.want.value, value)
 		})
