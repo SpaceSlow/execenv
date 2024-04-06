@@ -1,7 +1,6 @@
-package handlers
+package routers
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,12 +11,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMetricHandler_ServeHTTP(t *testing.T) {
+func TestMetricRouter(t *testing.T) {
+	
 	type fields struct {
-		method     string
-		metricType metrics.MetricType
-		storage    storages.Storage
-		url        string
+		method  string
+		storage storages.MetricStorage
+		path    string
 	}
 	type want struct {
 		statusCode int
@@ -29,12 +28,44 @@ func TestMetricHandler_ServeHTTP(t *testing.T) {
 		want   want
 	}{
 		{
+			name: "incorrect metric type",
+			fields: fields{
+				method: http.MethodPost,
+				path:   "/update/unknown_type/metric/42",
+			},
+			want: want{
+				http.StatusBadRequest,
+				nil,
+			},
+		},
+		{
+			name: "empty metric type",
+			fields: fields{
+				method: http.MethodPost,
+				path:   "/update/",
+			},
+			want: want{
+				http.StatusBadRequest,
+				nil,
+			},
+		},
+		{
+			name: "root path",
+			fields: fields{
+				method: http.MethodPost,
+				path:   "/",
+			},
+			want: want{
+				http.StatusBadRequest,
+				nil,
+			},
+		},
+		{
 			name: "incorrect method",
 			fields: fields{
-				method:     http.MethodGet,
-				metricType: metrics.Gauge,
-				storage:    storages.NewMemStorage(),
-				url:        "/update/gauge/metric/1.21",
+				method:  http.MethodGet,
+				storage: storages.NewMemStorage(),
+				path:    "/update/gauge/metric/1.21",
 			},
 			want: want{
 				statusCode: http.StatusMethodNotAllowed,
@@ -44,10 +75,9 @@ func TestMetricHandler_ServeHTTP(t *testing.T) {
 		{
 			name: "empty metric",
 			fields: fields{
-				method:     http.MethodPost,
-				metricType: metrics.Gauge,
-				storage:    storages.NewMemStorage(),
-				url:        "/update/gauge",
+				method:  http.MethodPost,
+				storage: storages.NewMemStorage(),
+				path:    "/update/gauge",
 			},
 			want: want{
 				statusCode: http.StatusNotFound,
@@ -57,10 +87,9 @@ func TestMetricHandler_ServeHTTP(t *testing.T) {
 		{
 			name: "empty value",
 			fields: fields{
-				method:     http.MethodPost,
-				metricType: metrics.Gauge,
-				storage:    storages.NewMemStorage(),
-				url:        "/update/gauge/metricName/",
+				method:  http.MethodPost,
+				storage: storages.NewMemStorage(),
+				path:    "/update/gauge/metricName/",
 			},
 			want: want{
 				statusCode: http.StatusBadRequest,
@@ -70,10 +99,9 @@ func TestMetricHandler_ServeHTTP(t *testing.T) {
 		{
 			name: "incorrect value (float for Counter metric type)",
 			fields: fields{
-				method:     http.MethodPost,
-				metricType: metrics.Counter,
-				storage:    storages.NewMemStorage(),
-				url:        "/update/counter/metric/54.54",
+				method:  http.MethodPost,
+				storage: storages.NewMemStorage(),
+				path:    "/update/counter/metric/54.54",
 			},
 			want: want{
 				statusCode: http.StatusBadRequest,
@@ -83,10 +111,9 @@ func TestMetricHandler_ServeHTTP(t *testing.T) {
 		{
 			name: "incorrect value (string for Counter metric type)",
 			fields: fields{
-				method:     http.MethodPost,
-				metricType: metrics.Counter,
-				storage:    storages.NewMemStorage(),
-				url:        "/update/counter/metric/incorrect_value",
+				method:  http.MethodPost,
+				storage: storages.NewMemStorage(),
+				path:    "/update/counter/metric/incorrect_value",
 			},
 			want: want{
 				statusCode: http.StatusBadRequest,
@@ -96,10 +123,9 @@ func TestMetricHandler_ServeHTTP(t *testing.T) {
 		{
 			name: "incorrect value (string for Gauge metric type)",
 			fields: fields{
-				method:     http.MethodPost,
-				metricType: metrics.Gauge,
-				storage:    storages.NewMemStorage(),
-				url:        "/update/gauge/metric/incorrect_value",
+				method:  http.MethodPost,
+				storage: storages.NewMemStorage(),
+				path:    "/update/gauge/metric/incorrect_value",
 			},
 			want: want{
 				statusCode: http.StatusBadRequest,
@@ -109,10 +135,9 @@ func TestMetricHandler_ServeHTTP(t *testing.T) {
 		{
 			name: "correct value (Counter metric type)",
 			fields: fields{
-				method:     http.MethodPost,
-				metricType: metrics.Counter,
-				storage:    storages.NewMemStorage(),
-				url:        "/update/counter/metric/101109",
+				method:  http.MethodPost,
+				storage: storages.NewMemStorage(),
+				path:    "/update/counter/metric/101109",
 			},
 			want: want{
 				statusCode: http.StatusOK,
@@ -126,10 +151,9 @@ func TestMetricHandler_ServeHTTP(t *testing.T) {
 		{
 			name: "correct value (Gauge metric type)",
 			fields: fields{
-				method:     http.MethodPost,
-				metricType: metrics.Gauge,
-				storage:    storages.NewMemStorage(),
-				url:        "/update/gauge/metric/1.21",
+				method:  http.MethodPost,
+				storage: storages.NewMemStorage(),
+				path:    "/update/gauge/metric/1.21",
 			},
 			want: want{
 				statusCode: http.StatusOK,
@@ -143,15 +167,14 @@ func TestMetricHandler_ServeHTTP(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			request := httptest.NewRequest(test.fields.method, test.fields.url, nil)
+			ts := httptest.NewServer(MetricRouter(test.fields.storage))
+			defer ts.Close()
 
-			w := httptest.NewRecorder()
-			http.StripPrefix(fmt.Sprintf("/update/%s/", test.fields.metricType.String()), MetricHandler{
-				MetricType: test.fields.metricType,
-				Storage:    test.fields.storage,
-			}).ServeHTTP(w, request)
+			req, err := http.NewRequest(test.fields.method, ts.URL+test.fields.path, nil)
+			require.NoError(t, err)
 
-			res := w.Result()
+			res, err := ts.Client().Do(req)
+			require.NoError(t, err)
 
 			assert.Equal(t, test.want.statusCode, res.StatusCode)
 
@@ -159,7 +182,7 @@ func TestMetricHandler_ServeHTTP(t *testing.T) {
 				return
 			}
 
-			storagedMetric, ok := test.fields.storage.Get(test.want.metric.Name)
+			storagedMetric, ok := test.fields.storage.Get(test.want.metric.Type, test.want.metric.Name)
 
 			require.Equal(t, true, ok)
 

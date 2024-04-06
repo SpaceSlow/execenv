@@ -6,11 +6,11 @@ import (
 
 	"github.com/SpaceSlow/execenv/cmd/metrics"
 	"github.com/SpaceSlow/execenv/cmd/storages"
+	"github.com/go-chi/chi/v5"
 )
 
 type MetricHandler struct {
-	MetricType metrics.MetricType
-	Storage    storages.Storage
+	Storage storages.MetricStorage
 }
 
 func (h MetricHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
@@ -19,7 +19,15 @@ func (h MetricHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	metric, err := metrics.ParseMetricFromPath(req.URL.Path, h.MetricType)
+	mType, err := metrics.ParseMetricType(chi.URLParam(req, "type"))
+	if errors.Is(err, &metrics.IncorrectMetricTypeOrValueError{}) {
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	name := chi.URLParam(req, "name")
+	value := chi.URLParam(req, "value")
+	metric, err := metrics.NewMetric(mType, name, value)
 	if errors.Is(err, &metrics.IncorrectMetricTypeOrValueError{}) {
 		res.WriteHeader(http.StatusBadRequest)
 		return

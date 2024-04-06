@@ -10,8 +10,9 @@ import (
 
 func TestMemStorage_Add(t *testing.T) {
 	type fields struct {
-		metrics map[string]interface{}
-		metric  metrics.Metric
+		counters map[string]int64
+		gauges   map[string]float64
+		metric   metrics.Metric
 	}
 	type want struct {
 		err   bool
@@ -25,7 +26,8 @@ func TestMemStorage_Add(t *testing.T) {
 		{
 			name: "adding Counter metric in empty storage",
 			fields: fields{
-				metrics: make(map[string]interface{}),
+				counters: make(map[string]int64),
+				gauges:   make(map[string]float64),
 				metric: metrics.Metric{
 					Type:  metrics.Counter,
 					Name:  "PollCount",
@@ -40,7 +42,8 @@ func TestMemStorage_Add(t *testing.T) {
 		{
 			name: "adding Gauge metric in empty storage",
 			fields: fields{
-				metrics: make(map[string]interface{}),
+				counters: make(map[string]int64),
+				gauges:   make(map[string]float64),
 				metric: metrics.Metric{
 					Type:  metrics.Gauge,
 					Name:  "RandomValue",
@@ -55,9 +58,8 @@ func TestMemStorage_Add(t *testing.T) {
 		{
 			name: "summation of Counter metrics value",
 			fields: fields{
-				metrics: map[string]interface{}{
-					"PollCount": int64(10),
-				},
+				counters: map[string]int64{"PollCount": 10},
+				gauges:   make(map[string]float64),
 				metric: metrics.Metric{
 					Type:  metrics.Counter,
 					Name:  "PollCount",
@@ -72,9 +74,8 @@ func TestMemStorage_Add(t *testing.T) {
 		{
 			name: "substitution of Gauge metrics value",
 			fields: fields{
-				metrics: map[string]interface{}{
-					"RandomValue": 1.2,
-				},
+				counters: make(map[string]int64),
+				gauges:   map[string]float64{"RandomValue": 1.2},
 				metric: metrics.Metric{
 					Type:  metrics.Gauge,
 					Name:  "PollCount",
@@ -89,7 +90,8 @@ func TestMemStorage_Add(t *testing.T) {
 		{
 			name: "adding incorrect type metric",
 			fields: fields{
-				metrics: make(map[string]interface{}),
+				counters: make(map[string]int64),
+				gauges:   make(map[string]float64),
 				metric: metrics.Metric{
 					Type:  metrics.MetricType(-1),
 					Name:  "PollCount",
@@ -104,7 +106,8 @@ func TestMemStorage_Add(t *testing.T) {
 		{
 			name: "adding Counter metric with incorrect value",
 			fields: fields{
-				metrics: make(map[string]interface{}),
+				counters: make(map[string]int64),
+				gauges:   make(map[string]float64),
 				metric: metrics.Metric{
 					Type:  metrics.Counter,
 					Name:  "PollCount",
@@ -119,7 +122,8 @@ func TestMemStorage_Add(t *testing.T) {
 		{
 			name: "adding Gauge metric with incorrect value",
 			fields: fields{
-				metrics: make(map[string]interface{}),
+				counters: make(map[string]int64),
+				gauges:   make(map[string]float64),
 				metric: metrics.Metric{
 					Type:  metrics.Gauge,
 					Name:  "PollCount",
@@ -135,7 +139,8 @@ func TestMemStorage_Add(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			storage := NewMemStorage()
-			storage.metrics = test.fields.metrics
+			storage.counters = test.fields.counters
+			storage.gauges = test.fields.gauges
 
 			err := storage.Add(&test.fields.metric)
 			assert.Equal(t, err != nil, test.want.err)
@@ -144,10 +149,16 @@ func TestMemStorage_Add(t *testing.T) {
 				return
 			}
 
-			value, ok := storage.metrics[test.fields.metric.Name]
-
-			require.True(t, ok)
-			assert.Equal(t, test.want.value, value)
+			switch test.fields.metric.Type {
+			case metrics.Counter:
+				value, ok := storage.counters[test.fields.metric.Name]
+				require.True(t, ok)
+				assert.Equal(t, test.want.value, value)
+			case metrics.Gauge:
+				value, ok := storage.gauges[test.fields.metric.Name]
+				require.True(t, ok)
+				assert.Equal(t, test.want.value, value)
+			}
 		})
 	}
 }

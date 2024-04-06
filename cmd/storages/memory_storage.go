@@ -7,12 +7,13 @@ import (
 )
 
 type MemStorage struct {
-	mu      sync.Mutex
-	metrics map[string]interface{}
+	mu       sync.Mutex
+	counters map[string]int64
+	gauges   map[string]float64
 }
 
 func NewMemStorage() *MemStorage {
-	return &MemStorage{metrics: make(map[string]interface{})}
+	return &MemStorage{counters: make(map[string]int64), gauges: make(map[string]float64)}
 }
 
 func (storage *MemStorage) Add(metric *metrics.Metric) error {
@@ -21,39 +22,34 @@ func (storage *MemStorage) Add(metric *metrics.Metric) error {
 
 	switch metric.Type {
 	case metrics.Counter:
-		prevValue, _ := storage.metrics[metric.Name].(int64)
+		prevValue := storage.counters[metric.Name]
 		value, ok := metric.Value.(int64)
 		if !ok {
 			return &metrics.IncorrectMetricTypeOrValueError{}
 		}
-		storage.metrics[metric.Name] = prevValue + value
+		storage.counters[metric.Name] = prevValue + value
 	case metrics.Gauge:
 		value, ok := metric.Value.(float64)
 		if !ok {
 			return &metrics.IncorrectMetricTypeOrValueError{}
 		}
-		storage.metrics[metric.Name] = value
+		storage.gauges[metric.Name] = value
 	default:
 		return &metrics.IncorrectMetricTypeOrValueError{}
 	}
 	return nil
 }
 
-func (storage *MemStorage) Get(name string) (metrics.Metric, bool) {
+func (storage *MemStorage) Get(metricType metrics.MetricType, name string) (metrics.Metric, bool) {
 	storage.mu.Lock()
 	defer storage.mu.Unlock()
 
-	value, ok := storage.metrics[name]
-	if !ok {
-		return metrics.Metric{}, false
-	}
-
-	var metricType metrics.MetricType
-	switch value.(type) {
-	case float64:
-		metricType = metrics.Gauge
-	case int64:
-		metricType = metrics.Counter
+	var value interface{}
+	switch metricType {
+	case metrics.Counter:
+		value = storage.counters[name]
+	case metrics.Gauge:
+		value = storage.gauges[name]
 	default:
 		return metrics.Metric{}, false
 	}

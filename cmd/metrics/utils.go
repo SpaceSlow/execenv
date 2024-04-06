@@ -4,21 +4,17 @@ import (
 	"fmt"
 	"net/http"
 	"runtime"
-	"strings"
 )
 
-// ParseMetricFromPath `path` string represent "<metricName>/<value>"
-func ParseMetricFromPath(path string, metricType MetricType) (*Metric, error) {
-	metricFields := strings.FieldsFunc(path, func(r rune) bool { return r == '/' })
-
-	if len(metricFields) == 0 {
-		return nil, &EmptyMetricNameError{}
+func ParseMetricType(mType string) (MetricType, error) {
+	switch mType {
+	case "counter":
+		return Counter, nil
+	case "gauge":
+		return Gauge, nil
+	default:
+		return MetricType(-1), &IncorrectMetricTypeOrValueError{}
 	}
-	if len(metricFields) != 2 || !metricType.isValid() {
-		return nil, &IncorrectMetricTypeOrValueError{}
-	}
-
-	return NewMetric(metricType, metricFields[0], metricFields[1])
 }
 
 func SendMetrics(url string, metrics []Metric) {

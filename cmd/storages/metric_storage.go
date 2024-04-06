@@ -4,7 +4,7 @@ import (
 	"github.com/SpaceSlow/execenv/cmd/metrics"
 )
 
-type Storage interface {
+type MetricStorage interface {
 	Add(metric *metrics.Metric) error
-	Get(name string) (metrics.Metric, bool)
+	Get(metricType metrics.MetricType, name string) (metrics.Metric, bool)
 }
