@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"fmt"
 	"strconv"
 )
 
@@ -8,6 +9,10 @@ type Metric struct {
 	Type  MetricType
 	Name  string
 	Value interface{}
+}
+
+func (m *Metric) String() string {
+	return fmt.Sprintf("%s = %v (%s)", m.Name, m.Value, m.Type)
 }
 
 func (m *Metric) ValueAsString() string {

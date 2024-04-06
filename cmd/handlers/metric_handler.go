@@ -68,9 +68,7 @@ func (h MetricHandler) List(res http.ResponseWriter, _ *http.Request) {
 	result := strings.Builder{}
 
 	for _, metric := range h.MetricStorage.List() {
-		result.WriteString(metric.Name)
-		result.WriteString(" - ")
-		result.WriteString(metric.ValueAsString())
+		result.WriteString(metric.String())
 		result.WriteString("\n")
 	}
 

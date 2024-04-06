@@ -11,7 +11,7 @@ func MetricRouter(storage storages.MetricStorage) chi.Router {
 
 	r.Route("/", func(r chi.Router) {
 		r.Post("/", handlers.BadRequestHandlerFunc)
-		r.Get("/", handlers.MetricHandler{MetricStorage: storage}.List) // TODO
+		r.Get("/", handlers.MetricHandler{MetricStorage: storage}.List)
 
 		r.Route("/update/", func(r chi.Router) {
 			r.Post("/{type}/{name}/{value}", handlers.MetricHandler{MetricStorage: storage}.Post)
