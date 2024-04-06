@@ -1,8 +1,6 @@
 package storages
 
-import (
-	"github.com/SpaceSlow/execenv/cmd/metrics"
-)
+import "github.com/SpaceSlow/execenv/cmd/metrics"
 
 type MetricStorage interface {
 	Add(metric *metrics.Metric) error
