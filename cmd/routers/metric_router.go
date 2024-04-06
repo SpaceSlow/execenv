@@ -11,15 +11,15 @@ func MetricRouter(storage storages.MetricStorage) chi.Router {
 
 	r.Route("/", func(r chi.Router) {
 		r.Post("/", handlers.BadRequestHandlerFunc)
-		// router.Get("/", ...) // TODO
+		r.Get("/", handlers.MetricHandler{MetricStorage: storage}.List) // TODO
 
 		r.Route("/update/", func(r chi.Router) {
-			r.Post("/{type}/{name}/{value}", handlers.MetricHandler{Storage: storage}.ServeHTTP)
+			r.Post("/{type}/{name}/{value}", handlers.MetricHandler{MetricStorage: storage}.Post)
 			r.Post("/{type}/{name}/", handlers.BadRequestHandlerFunc)
 			r.Post("/", handlers.BadRequestHandlerFunc)
 		})
 
-		// router.Get("/value/{type}/{name}", ...) // TODO
+		r.Get("/value/{type}/{name}", handlers.MetricHandler{MetricStorage: storage}.Get)
 	})
 
 	return r

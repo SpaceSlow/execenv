@@ -6,5 +6,6 @@ import (
 
 type MetricStorage interface {
 	Add(metric *metrics.Metric) error
-	Get(metricType metrics.MetricType, name string) (metrics.Metric, bool)
+	Get(metricType metrics.MetricType, name string) (*metrics.Metric, bool)
+	List() []metrics.Metric
 }

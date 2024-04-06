@@ -10,6 +10,17 @@ type Metric struct {
 	Value interface{}
 }
 
+func (m *Metric) ValueAsString() string {
+	switch m.Type {
+	case Counter:
+		return strconv.FormatInt(m.Value.(int64), 10)
+	case Gauge:
+		return strconv.FormatFloat(m.Value.(float64), 'f', -1, 64)
+	default:
+		return ""
+	}
+}
+
 func NewMetric(metricType MetricType, name, value string) (*Metric, error) {
 	var err error
 	var val interface{}

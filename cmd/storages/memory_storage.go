@@ -40,23 +40,51 @@ func (storage *MemStorage) Add(metric *metrics.Metric) error {
 	return nil
 }
 
-func (storage *MemStorage) Get(metricType metrics.MetricType, name string) (metrics.Metric, bool) {
+func (storage *MemStorage) Get(metricType metrics.MetricType, name string) (*metrics.Metric, bool) {
 	storage.mu.Lock()
 	defer storage.mu.Unlock()
 
 	var value interface{}
+	var ok bool
 	switch metricType {
 	case metrics.Counter:
-		value = storage.counters[name]
+		value, ok = storage.counters[name]
 	case metrics.Gauge:
-		value = storage.gauges[name]
+		value, ok = storage.gauges[name]
 	default:
-		return metrics.Metric{}, false
+		return nil, false
+	}
+	if !ok {
+		return nil, ok
 	}
 
-	return metrics.Metric{
+	return &metrics.Metric{
 		Type:  metricType,
 		Name:  name,
 		Value: value,
 	}, true
+}
+
+func (storage *MemStorage) List() []metrics.Metric {
+	storage.mu.Lock()
+	defer storage.mu.Unlock()
+
+	metricSlice := make([]metrics.Metric, 0, len(storage.counters)+len(storage.gauges))
+
+	for name, value := range storage.counters {
+		metricSlice = append(metricSlice, metrics.Metric{
+			Type:  metrics.Counter,
+			Name:  name,
+			Value: value,
+		})
+	}
+	for name, value := range storage.gauges {
+		metricSlice = append(metricSlice, metrics.Metric{
+			Type:  metrics.Gauge,
+			Name:  name,
+			Value: value,
+		})
+	}
+
+	return metricSlice
 }
