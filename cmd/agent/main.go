@@ -7,14 +7,14 @@ import (
 	"github.com/SpaceSlow/execenv/cmd/metrics"
 )
 
-const (
-	pollInterval   = 2 * time.Second
-	reportInterval = 10 * time.Second
-)
-
 func main() {
+	parseFlags()
+
 	var metricSlice []metrics.Metric
-	url := "http://localhost:8080/update"
+
+	url := "http://" + flagServerAddr.String() + "/update"
+	pollInterval := time.Duration(flagPollInterval) * time.Second
+	reportInterval := time.Duration(flagReportInterval) * time.Second
 
 	pollCount := 0
 
