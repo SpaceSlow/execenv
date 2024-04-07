@@ -2,12 +2,12 @@ package handlers
 
 import (
 	"errors"
-	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strings"
 
 	"github.com/SpaceSlow/execenv/cmd/metrics"
 	"github.com/SpaceSlow/execenv/cmd/storages"
+	"github.com/go-chi/chi/v5"
 )
 
 type MetricHandler struct {
