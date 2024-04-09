@@ -3,19 +3,20 @@ package main
 import (
 	"net/http"
 
-	"github.com/SpaceSlow/execenv/cmd/flags"
 	"github.com/SpaceSlow/execenv/cmd/routers"
 	"github.com/SpaceSlow/execenv/cmd/storages"
 )
 
-func runServer(addr flags.NetAddress) error {
-	return http.ListenAndServe(addr.String(), routers.MetricRouter(storages.NewMemStorage()))
+func runServer() error {
+	cfg, err := GetConfigWithFlags()
+	if err != nil {
+		return err
+	}
+	return http.ListenAndServe(cfg.ServerAddr.String(), routers.MetricRouter(storages.NewMemStorage()))
 }
 
 func main() {
-	parseFlags()
-
-	if err := runServer(flagRunAddr); err != nil {
+	if err := runServer(); err != nil {
 		panic(err)
 	}
 }

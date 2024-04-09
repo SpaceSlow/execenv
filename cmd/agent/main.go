@@ -8,13 +8,17 @@ import (
 )
 
 func main() {
-	parseFlags()
+	cfg, err := GetConfigWithFlags()
+
+	if err != nil {
+		panic(err)
+	}
 
 	var metricSlice []metrics.Metric
 
-	url := "http://" + flagServerAddr.String() + "/update"
-	pollInterval := time.Duration(flagPollInterval) * time.Second
-	reportInterval := time.Duration(flagReportInterval) * time.Second
+	url := "http://" + cfg.ServerAddr.String() + "/update"
+	pollInterval := time.Duration(cfg.PollInterval) * time.Second
+	reportInterval := time.Duration(cfg.ReportInterval) * time.Second
 
 	pollCount := 0
 

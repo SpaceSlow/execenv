@@ -15,6 +15,9 @@ func (a NetAddress) Type() string {
 }
 
 func (a NetAddress) String() string {
+	if a.Host == "" && a.Port == 0 {
+		return ""
+	}
 	return a.Host + ":" + strconv.Itoa(a.Port)
 }
 
@@ -30,4 +33,8 @@ func (a *NetAddress) Set(s string) error {
 	a.Host = hp[0]
 	a.Port = port
 	return nil
+}
+
+func (a *NetAddress) UnmarshalText(text []byte) error {
+	return a.Set(string(text))
 }
