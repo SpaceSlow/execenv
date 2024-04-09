@@ -40,10 +40,8 @@ func newMemStorageWithMetrics(metrics []metrics.Metric) *storages.MemStorage {
 }
 
 func requireEqualExistingMetricsWithResponse(t *testing.T, test testCase, res *http.Response) {
-	defer func(Body io.ReadCloser) {
-		require.NoError(t, Body.Close())
-	}(res.Body)
 	body, err := io.ReadAll(res.Body)
+	require.NoError(t, res.Body.Close())
 	require.NoError(t, err)
 	lines := strings.FieldsFunc(string(body), func(r rune) bool {
 		return r == '\n'
@@ -309,9 +307,6 @@ func TestMetricRouter(t *testing.T) {
 			require.NoError(t, err)
 
 			res, err := ts.Client().Do(req)
-			defer func(Body io.ReadCloser) {
-				require.NoError(t, Body.Close())
-			}(res.Body)
 			require.NoError(t, err)
 
 			assert.Equal(t, test.want.statusCode, res.StatusCode)
