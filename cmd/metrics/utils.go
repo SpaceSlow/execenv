@@ -25,10 +25,11 @@ func SendMetrics(url string, metrics []Metric) {
 
 func SendMetric(url string, metric Metric) error {
 	var err error
-	_, err = http.Post(
+	res, err := http.Post(
 		fmt.Sprintf(`%s/%s/%s/%v`, url, metric.Type.String(), metric.Name, metric.Value),
 		"text/plain",
 		nil)
+	defer res.Body.Close()
 	return err
 }
 
