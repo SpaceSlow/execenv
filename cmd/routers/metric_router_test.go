@@ -40,7 +40,12 @@ func newMemStorageWithMetrics(metrics []metrics.Metric) *storages.MemStorage {
 }
 
 func requireEqualExistingMetricsWithResponse(t *testing.T, test testCase, res *http.Response) {
-	defer res.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			return
+		}
+	}(res.Body)
 	body, err := io.ReadAll(res.Body)
 	require.NoError(t, err)
 	lines := strings.FieldsFunc(string(body), func(r rune) bool {

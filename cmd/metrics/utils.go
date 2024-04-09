@@ -28,7 +28,9 @@ func SendMetric(url string, metric Metric) error {
 		fmt.Sprintf(`%s/%s/%s/%v`, url, metric.Type.String(), metric.Name, metric.Value),
 		"text/plain",
 		nil)
-	err = res.Body.Close()
+	if closingErr := res.Body.Close(); closingErr != nil {
+		err = closingErr
+	}
 	return err
 }
 
