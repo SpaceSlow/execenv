@@ -28,10 +28,10 @@ func SendMetric(url string, metric Metric) error {
 		fmt.Sprintf(`%s/%s/%s/%v`, url, metric.Type.String(), metric.Name, metric.Value),
 		"text/plain",
 		nil)
-	if closingErr := res.Body.Close(); closingErr != nil {
-		err = closingErr
+	if err != nil {
+		return err
 	}
-	return err
+	return res.Body.Close()
 }
 
 func GetRuntimeMetrics() []Metric {
