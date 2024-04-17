@@ -1,13 +1,18 @@
 package main
 
 import (
+	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/SpaceSlow/execenv/cmd/routers"
 	"github.com/SpaceSlow/execenv/cmd/storages"
 )
 
+var logger = slog.New(slog.NewJSONHandler(os.Stderr, nil))
+
 func runServer() error {
+	slog.SetDefault(logger)
 	cfg, err := GetConfigWithFlags()
 	if err != nil {
 		return err
