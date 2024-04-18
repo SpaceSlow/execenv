@@ -1,18 +1,19 @@
 package main
 
 import (
-	"log/slog"
 	"net/http"
-	"os"
 
+	"github.com/SpaceSlow/execenv/cmd/middlewares"
 	"github.com/SpaceSlow/execenv/cmd/routers"
 	"github.com/SpaceSlow/execenv/cmd/storages"
+	"go.uber.org/zap"
 )
 
-var logger = slog.New(slog.NewJSONHandler(os.Stderr, nil))
-
 func runServer() error {
-	slog.SetDefault(logger)
+	if err := middlewares.Initialize(zap.InfoLevel.String()); err != nil {
+		return err
+	}
+
 	cfg, err := GetConfigWithFlags()
 	if err != nil {
 		return err

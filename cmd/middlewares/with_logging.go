@@ -1,10 +1,27 @@
 package middlewares
 
 import (
-	"log/slog"
+	"go.uber.org/zap"
 	"net/http"
 	"time"
 )
+
+var Log = zap.NewNop()
+
+func Initialize(level string) error {
+	lvl, err := zap.ParseAtomicLevel(level)
+	if err != nil {
+		return err
+	}
+	cfg := zap.NewProductionConfig()
+	cfg.Level = lvl
+	zl, err := cfg.Build()
+	if err != nil {
+		return err
+	}
+	Log = zl
+	return nil
+}
 
 type Response struct {
 	statusCode int
@@ -43,13 +60,13 @@ func WithLogging(h http.HandlerFunc) http.HandlerFunc {
 
 		duration := time.Since(start)
 
-		slog.Default().Info(
+		Log.Info(
 			"request/response",
-			"uri", r.RequestURI,
-			"method", r.Method,
-			"duration", duration,
-			"status", l.response.statusCode,
-			"size", l.response.size,
+			zap.String("uri", r.RequestURI),
+			zap.String("method", r.Method),
+			zap.Duration("duration", duration),
+			zap.Int("status", l.response.statusCode),
+			zap.Int("size", l.response.size),
 		)
 	}
 

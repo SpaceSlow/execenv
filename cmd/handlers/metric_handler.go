@@ -61,6 +61,7 @@ func (h MetricHandler) Get(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	res.WriteHeader(http.StatusOK)
 	_, _ = res.Write([]byte(metric.ValueAsString()))
 }
 
@@ -72,5 +73,6 @@ func (h MetricHandler) List(res http.ResponseWriter, _ *http.Request) {
 		result.WriteString("\n")
 	}
 
+	res.WriteHeader(http.StatusOK)
 	_, _ = res.Write([]byte(result.String()))
 }
