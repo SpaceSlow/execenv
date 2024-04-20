@@ -86,7 +86,7 @@ func TestMetricRouter(t *testing.T) {
 				path:   "/",
 			},
 			want: want{
-				http.StatusBadRequest,
+				http.StatusMethodNotAllowed,
 				nil,
 			},
 		},

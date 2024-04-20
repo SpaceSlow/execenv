@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 )
@@ -9,6 +10,67 @@ type Metric struct {
 	Type  MetricType
 	Name  string
 	Value interface{}
+}
+
+type JSONMetric struct {
+	ID    string   `json:"id"`
+	MType string   `json:"type"`
+	Delta *int64   `json:"delta,omitempty"`
+	Value *float64 `json:"value,omitempty"`
+}
+
+func (m *Metric) MarshalJSON() ([]byte, error) {
+	metric := JSONMetric{
+		ID:    m.Name,
+		MType: m.Type.String(),
+	}
+
+	switch m.Type {
+	case Counter:
+		delta, ok := m.Value.(int64)
+		if !ok {
+			return nil, &IncorrectMetricTypeOrValueError{}
+		}
+		metric.Delta = &delta
+	case Gauge:
+		value, ok := m.Value.(float64)
+		if !ok {
+			return nil, &IncorrectMetricTypeOrValueError{}
+		}
+		metric.Value = &value
+	}
+
+	return json.Marshal(metric)
+}
+
+func (m *Metric) UnmarshalJSON(data []byte) error {
+	var metric JSONMetric
+	if json.Unmarshal(data, &metric) != nil {
+		return &IncorrectMetricTypeOrValueError{}
+	}
+
+	var mType MetricType
+	if t, err := ParseMetricType(metric.MType); err != nil {
+		return err
+	} else {
+		mType = t
+	}
+	m.Name = metric.ID
+	m.Type = mType
+	switch mType {
+	case Counter:
+		if metric.Delta != nil {
+			m.Value = *metric.Delta
+		}
+	case Gauge:
+		if metric.Value != nil {
+			m.Value = *metric.Value
+		}
+	}
+	if m.Value == nil {
+		return &IncorrectMetricTypeOrValueError{}
+	}
+	return nil
 }
 
 func (m *Metric) String() string {

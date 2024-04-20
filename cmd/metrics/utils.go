@@ -1,7 +1,7 @@
 package metrics
 
 import (
-	"fmt"
+	"bytes"
 	"net/http"
 	"runtime"
 )
@@ -24,10 +24,17 @@ func SendMetrics(url string, metrics []Metric) {
 }
 
 func SendMetric(url string, metric Metric) error {
+	jsonMetric, err := metric.MarshalJSON()
+	if err != nil {
+		return err
+	}
+	readerMetric := bytes.NewReader(jsonMetric)
+
 	res, err := http.Post(
-		fmt.Sprintf(`%s/%s/%s/%v`, url, metric.Type.String(), metric.Name, metric.Value),
-		"text/plain",
-		nil)
+		url,
+		"application/json",
+		readerMetric,
+	)
 	if err != nil {
 		return err
 	}

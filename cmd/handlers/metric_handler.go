@@ -15,10 +15,6 @@ type MetricHandler struct {
 }
 
 func (h MetricHandler) Post(res http.ResponseWriter, req *http.Request) {
-	if req.Method != http.MethodPost {
-		res.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
 	mType, err := metrics.ParseMetricType(chi.URLParam(req, "type"))
 	if errors.Is(err, &metrics.IncorrectMetricTypeOrValueError{}) {
 		res.WriteHeader(http.StatusBadRequest)
@@ -45,11 +41,6 @@ func (h MetricHandler) Post(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h MetricHandler) Get(res http.ResponseWriter, req *http.Request) {
-	if req.Method != http.MethodGet {
-		res.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
 	mType, err := metrics.ParseMetricType(chi.URLParam(req, "type"))
 	if errors.Is(err, &metrics.IncorrectMetricTypeOrValueError{}) {
 		res.WriteHeader(http.StatusBadRequest)
@@ -62,7 +53,7 @@ func (h MetricHandler) Get(res http.ResponseWriter, req *http.Request) {
 	}
 
 	res.WriteHeader(http.StatusOK)
-	_, _ = res.Write([]byte(metric.ValueAsString()))
+	res.Write([]byte(metric.ValueAsString()))
 }
 
 func (h MetricHandler) List(res http.ResponseWriter, _ *http.Request) {
@@ -74,5 +65,5 @@ func (h MetricHandler) List(res http.ResponseWriter, _ *http.Request) {
 	}
 
 	res.WriteHeader(http.StatusOK)
-	_, _ = res.Write([]byte(result.String()))
+	res.Write([]byte(result.String()))
 }
