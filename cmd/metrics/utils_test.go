@@ -1,23 +1,29 @@
 package metrics
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func getAddress[T int64 | float64](v T) *T {
+	return &v
+}
 
 func TestSendMetrics(t *testing.T) {
 	tests := []struct {
-		name     string
-		metrics  []Metric
-		wantUrls []string
+		name             string
+		metrics          []Metric
+		wantResponseBody []JSONMetric
 	}{
 		{
-			name:     "empty metrics",
-			metrics:  nil,
-			wantUrls: []string{},
+			name:             "empty metrics",
+			metrics:          nil,
+			wantResponseBody: []JSONMetric{},
 		},
 		{
 			name: "one metric",
@@ -26,8 +32,12 @@ func TestSendMetrics(t *testing.T) {
 				Name:  "RandomValue",
 				Value: 1.21,
 			}},
-			wantUrls: []string{
-				"/update/gauge/RandomValue/1.21",
+			wantResponseBody: []JSONMetric{
+				{
+					ID:    "RandomValue",
+					MType: "gauge",
+					Value: getAddress(1.21),
+				},
 			},
 		},
 		{
@@ -41,7 +51,7 @@ func TestSendMetrics(t *testing.T) {
 				{
 					Type:  Counter,
 					Name:  "PollCount",
-					Value: 42,
+					Value: int64(42),
 				},
 				{
 					Type:  Gauge,
@@ -49,24 +59,42 @@ func TestSendMetrics(t *testing.T) {
 					Value: 1011.09,
 				},
 			},
-			wantUrls: []string{
-				"/update/gauge/RandomValue/1.21",
-				"/update/counter/PollCount/42",
-				"/update/gauge/SecondRandomValue/1011.09",
+			wantResponseBody: []JSONMetric{
+				{
+					ID:    "RandomValue",
+					MType: "gauge",
+					Value: getAddress(1.21),
+				},
+				{
+					ID:    "PollCount",
+					MType: "counter",
+					Delta: getAddress(int64(42)),
+				},
+				{
+					ID:    "SecondRandomValue",
+					MType: "gauge",
+					Value: getAddress(1011.09),
+				},
 			},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			urls := make([]string, 0, len(test.metrics))
+			receivedMetrics := make([]JSONMetric, 0, len(test.metrics))
 			testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				urls = append(urls, r.RequestURI)
+				require.Equal(t, r.Method, http.MethodPost)
+				require.Equal(t, r.Header.Get("Content-Type"), "application/json")
+
+				var m JSONMetric
+				require.NoError(t, json.NewDecoder(r.Body).Decode(&m))
+
+				receivedMetrics = append(receivedMetrics, m)
 			}))
 			defer testServer.Close()
 
-			SendMetrics(testServer.URL+"/update", test.metrics)
+			SendMetrics(testServer.URL+"/update/", test.metrics)
 
-			assert.ElementsMatch(t, urls, test.wantUrls)
+			assert.ElementsMatch(t, receivedMetrics, test.wantResponseBody)
 		})
 	}
 }
