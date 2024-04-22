@@ -45,8 +45,8 @@ func (l loggingResponseWriter) WriteHeader(statusCode int) {
 	l.ResponseWriter.WriteHeader(statusCode)
 }
 
-func WithLogging(h http.HandlerFunc) http.HandlerFunc {
-	loggerHandleFunc := func(w http.ResponseWriter, r *http.Request) {
+func WithLogging(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
 		l := loggingResponseWriter{
@@ -56,7 +56,7 @@ func WithLogging(h http.HandlerFunc) http.HandlerFunc {
 				size:       0,
 			},
 		}
-		h(&l, r)
+		next.ServeHTTP(&l, r)
 
 		duration := time.Since(start)
 
@@ -68,7 +68,5 @@ func WithLogging(h http.HandlerFunc) http.HandlerFunc {
 			zap.Int("status", l.response.statusCode),
 			zap.Int("size", l.response.size),
 		)
-	}
-
-	return loggerHandleFunc
+	})
 }

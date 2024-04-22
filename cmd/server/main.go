@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func runServer() error {
+func runServer(middlewareHandlers ...func(next http.Handler) http.Handler) error {
 	if err := middlewares.Initialize(zap.InfoLevel.String()); err != nil {
 		return err
 	}
@@ -18,11 +18,20 @@ func runServer() error {
 	if err != nil {
 		return err
 	}
-	return http.ListenAndServe(cfg.ServerAddr.String(), routers.MetricRouter(storages.NewMemStorage()))
+
+	mux := routers.MetricRouter(storages.NewMemStorage()).(http.Handler)
+	for _, middleware := range middlewareHandlers {
+		mux = middleware(mux)
+	}
+
+	return http.ListenAndServe(cfg.ServerAddr.String(), mux)
 }
 
 func main() {
-	if err := runServer(); err != nil {
+	middlewareHandlers := []func(next http.Handler) http.Handler{
+		middlewares.WithLogging,
+	}
+	if err := runServer(middlewareHandlers...); err != nil {
 		panic(err)
 	}
 }
