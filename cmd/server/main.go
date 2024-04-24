@@ -29,6 +29,7 @@ func runServer(middlewareHandlers ...func(next http.Handler) http.Handler) error
 
 func main() {
 	middlewareHandlers := []func(next http.Handler) http.Handler{
+		middlewares.WithCompressing,
 		middlewares.WithLogging,
 	}
 	if err := runServer(middlewareHandlers...); err != nil {
