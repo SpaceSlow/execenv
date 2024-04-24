@@ -4,10 +4,13 @@ import (
 	"compress/gzip"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 )
 
-const compressionAlgorithm = "gzip"
+const CompressionAlgorithm = "gzip"
+
+var SupportedContentTypes = []string{"application/json", "text/html"}
 
 type compressResponseWriter struct {
 	http.ResponseWriter
@@ -55,7 +58,8 @@ func newCompressReader(r io.ReadCloser) (*compressReader, error) {
 
 func WithCompressing(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.Header.Get("Content-Encoding"), compressionAlgorithm) {
+		isContainsCompression := strings.Contains(r.Header.Get("Content-Encoding"), CompressionAlgorithm)
+		if isContainsCompression {
 			cr, err := newCompressReader(r.Body)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
@@ -65,7 +69,9 @@ func WithCompressing(next http.Handler) http.Handler {
 			defer cr.Close()
 		}
 
-		if strings.Contains(w.Header().Get("Accept-Encoding"), compressionAlgorithm) {
+		isSupportedContentType := slices.Contains(SupportedContentTypes, w.Header().Get("Content-Type"))
+		isMatchCompressionAlgorithm := strings.Contains(r.Header.Get("Accept-Encoding"), CompressionAlgorithm)
+		if isSupportedContentType && isMatchCompressionAlgorithm {
 			gz, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
@@ -73,7 +79,7 @@ func WithCompressing(next http.Handler) http.Handler {
 			}
 			defer gz.Close()
 
-			w.Header().Set("Content-Encoding", compressionAlgorithm)
+			w.Header().Set("Content-Encoding", CompressionAlgorithm)
 			w = newCompressResponseWriter(w)
 		}
 
