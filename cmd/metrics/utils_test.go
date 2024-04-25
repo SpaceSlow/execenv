@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -84,9 +85,13 @@ func TestSendMetrics(t *testing.T) {
 			testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				require.Equal(t, r.Method, http.MethodPost)
 				require.Equal(t, r.Header.Get("Content-Type"), "application/json")
+				require.Equal(t, r.Header.Get("Content-Encoding"), "gzip")
+
+				dBody, err := gzip.NewReader(r.Body)
+				require.NoError(t, err)
 
 				var m JSONMetric
-				require.NoError(t, json.NewDecoder(r.Body).Decode(&m))
+				require.NoError(t, json.NewDecoder(dBody).Decode(&m))
 
 				receivedMetrics = append(receivedMetrics, m)
 			}))

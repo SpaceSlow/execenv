@@ -2,6 +2,8 @@ package metrics
 
 import (
 	"bytes"
+	"compress/gzip"
+	"fmt"
 	"net/http"
 	"runtime"
 )
@@ -23,18 +25,42 @@ func SendMetrics(url string, metrics []Metric) {
 	}
 }
 
+func newCompressedRequest(method, url string, data []byte) (*http.Request, error) {
+	var b bytes.Buffer
+	w, err := gzip.NewWriterLevel(&b, gzip.BestCompression)
+	if err != nil {
+		return nil, fmt.Errorf("failed init compress writer: %v", err)
+	}
+	_, err = w.Write(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed write data to compress temporary buffer: %v", err)
+	}
+	err = w.Close()
+	if err != nil {
+		return nil, fmt.Errorf("failed compress data: %v", err)
+	}
+	req, err := http.NewRequest(method, url, &b)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Encoding", "gzip")
+	req.Header.Set("Content-Type", "application/json")
+
+	return req, nil
+}
+
 func SendMetric(url string, metric Metric) error {
 	jsonMetric, err := metric.MarshalJSON()
 	if err != nil {
 		return err
 	}
-	readerMetric := bytes.NewReader(jsonMetric)
 
-	res, err := http.Post(
-		url,
-		"application/json",
-		readerMetric,
-	)
+	req, err := newCompressedRequest(http.MethodPost, url, jsonMetric)
+	if err != nil {
+		return err
+	}
+
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
