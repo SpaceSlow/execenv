@@ -28,7 +28,7 @@ func (w compressResponseWriter) Write(b []byte) (int, error) {
 func (w compressResponseWriter) WriteHeader(statusCode int) {
 	isSupportedContentType := slices.Contains(SupportedContentTypes, w.Header().Get("Content-Type"))
 	if statusCode < 300 && isSupportedContentType {
-		w.Header().Set("Content-Encoding", "gzip")
+		w.Header().Set("Content-Encoding", CompressionAlgorithm)
 	}
 	w.ResponseWriter.WriteHeader(statusCode)
 }
