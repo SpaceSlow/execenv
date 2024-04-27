@@ -25,13 +25,13 @@ func GetConfigWithFlags() (*Config, error) {
 	if cfg.ServerAddr.String() == "" {
 		cfg.ServerAddr = flagRunAddr
 	}
-	if os.Getenv("STORE_INTERVAL") == "" {
+	if _, ok := os.LookupEnv("STORE_INTERVAL"); !ok {
 		cfg.StoreInterval = flagStoreInterval
 	}
-	if cfg.StoragePath == "" {
+	if _, ok := os.LookupEnv("FILE_STORAGE_PATH"); !ok {
 		cfg.StoragePath = flagStoragePath
 	}
-	if os.Getenv("RESTORE") == "" {
+	if _, ok := os.LookupEnv("RESTORE"); !ok {
 		cfg.NeededRestore = flagNeedRestore
 	}
 
