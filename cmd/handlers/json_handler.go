@@ -13,7 +13,6 @@ type JSONMetricHandler struct {
 }
 
 func (h JSONMetricHandler) Post(res http.ResponseWriter, req *http.Request) {
-	res.Header().Set("Content-Type", "application/json")
 	var metric *metrics.Metric
 	if err := json.NewDecoder(req.Body).Decode(&metric); err != nil {
 		http.Error(res, err.Error(), http.StatusBadRequest)
@@ -29,13 +28,12 @@ func (h JSONMetricHandler) Post(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusOK)
 	res.Write(metricJSON)
 }
 
 func (h JSONMetricHandler) Get(res http.ResponseWriter, req *http.Request) {
-	res.Header().Set("Content-Type", "application/json")
-
 	var jsonMetric *metrics.JSONMetric
 	if err := json.NewDecoder(req.Body).Decode(&jsonMetric); err != nil {
 		http.Error(res, err.Error(), http.StatusBadRequest)
@@ -58,6 +56,7 @@ func (h JSONMetricHandler) Get(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusOK)
 	res.Write(metricJSON)
 }

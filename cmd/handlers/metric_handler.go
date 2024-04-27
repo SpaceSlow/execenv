@@ -64,6 +64,7 @@ func (h MetricHandler) List(res http.ResponseWriter, _ *http.Request) {
 		result.WriteString("\n")
 	}
 
+	res.Header().Set("Content-Type", "text/html")
 	res.WriteHeader(http.StatusOK)
 	res.Write([]byte(result.String()))
 }

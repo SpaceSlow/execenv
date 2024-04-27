@@ -14,22 +14,34 @@ var SupportedContentTypes = []string{"application/json", "text/html"}
 
 type compressResponseWriter struct {
 	http.ResponseWriter
-	zw *gzip.Writer
+	compressWriter *gzip.Writer
 }
 
 func (w compressResponseWriter) Write(b []byte) (int, error) {
-	return w.zw.Write(b)
+	isSupportedContentType := slices.Contains(SupportedContentTypes, w.Header().Get("Content-Type"))
+	if isSupportedContentType {
+		return w.compressWriter.Write(b)
+	}
+	return w.ResponseWriter.Write(b)
+}
+
+func (w compressResponseWriter) WriteHeader(statusCode int) {
+	isSupportedContentType := slices.Contains(SupportedContentTypes, w.Header().Get("Content-Type"))
+	if statusCode < 300 && isSupportedContentType {
+		w.Header().Set("Content-Encoding", "gzip")
+	}
+	w.ResponseWriter.WriteHeader(statusCode)
 }
 
 func newCompressResponseWriter(w http.ResponseWriter) *compressResponseWriter {
 	return &compressResponseWriter{
 		ResponseWriter: w,
-		zw:             gzip.NewWriter(w),
+		compressWriter: gzip.NewWriter(w),
 	}
 }
 
 type compressReader struct {
-	r  io.ReadCloser
+	io.ReadCloser
 	zr *gzip.Reader
 }
 
@@ -38,7 +50,7 @@ func (c compressReader) Read(p []byte) (n int, err error) {
 }
 
 func (c *compressReader) Close() error {
-	if err := c.r.Close(); err != nil {
+	if err := c.ReadCloser.Close(); err != nil {
 		return err
 	}
 	return c.zr.Close()
@@ -51,8 +63,8 @@ func newCompressReader(r io.ReadCloser) (*compressReader, error) {
 	}
 
 	return &compressReader{
-		r:  r,
-		zr: zr,
+		ReadCloser: r,
+		zr:         zr,
 	}, nil
 }
 
@@ -69,18 +81,11 @@ func WithCompressing(next http.Handler) http.Handler {
 			defer cr.Close()
 		}
 
-		isSupportedContentType := slices.Contains(SupportedContentTypes, w.Header().Get("Content-Type"))
 		isMatchCompressionAlgorithm := strings.Contains(r.Header.Get("Accept-Encoding"), CompressionAlgorithm)
-		if isSupportedContentType && isMatchCompressionAlgorithm {
-			gz, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			defer gz.Close()
-
-			w.Header().Set("Content-Encoding", CompressionAlgorithm)
-			w = newCompressResponseWriter(w)
+		if isMatchCompressionAlgorithm {
+			cw := newCompressResponseWriter(w)
+			w = cw
+			defer cw.compressWriter.Close()
 		}
 
 		next.ServeHTTP(w, r)
