@@ -19,7 +19,12 @@ func runServer(middlewareHandlers ...func(next http.Handler) http.Handler) error
 		return err
 	}
 
-	mux := routers.MetricRouter(storages.NewMemStorage()).(http.Handler)
+	storage, err := storages.NewMemFileStorage(cfg.StoragePath, cfg.StoreInterval, cfg.NeededRestore)
+	if err != nil {
+		return err
+	}
+	defer storage.Close()
+	mux := routers.MetricRouter(storage).(http.Handler)
 	for _, middleware := range middlewareHandlers {
 		mux = middleware(mux)
 	}

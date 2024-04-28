@@ -1,15 +1,15 @@
 package main
 
 import (
-	"fmt"
+	"os"
+
 	"github.com/SpaceSlow/execenv/cmd/flags"
 	"github.com/caarlos0/env"
-	"os"
 )
 
 type Config struct {
 	ServerAddr    flags.NetAddress `env:"ADDRESS"`
-	StoreInterval int              `env:"STORE_INTERVAL"`
+	StoreInterval uint             `env:"STORE_INTERVAL"`
 	StoragePath   string           `env:"FILE_STORAGE_PATH"`
 	NeededRestore bool             `env:"RESTORE"`
 }
@@ -35,6 +35,5 @@ func GetConfigWithFlags() (*Config, error) {
 		cfg.NeededRestore = flagNeedRestore
 	}
 
-	fmt.Println(cfg)
 	return cfg, nil
 }
