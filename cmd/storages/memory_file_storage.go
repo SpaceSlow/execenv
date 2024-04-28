@@ -58,7 +58,7 @@ func (s *MemFileStorage) LoadMetricsFromFile() error {
 	s.mu.Lock()
 	data, err := os.ReadFile(s.f.Name())
 	s.mu.Unlock()
-	if err != nil {
+	if err != nil || len(data) == 0 {
 		return err
 	}
 	var metricSlice []*metrics.Metric
