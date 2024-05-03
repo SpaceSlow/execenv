@@ -38,6 +38,8 @@ func (m *Metric) MarshalJSON() ([]byte, error) {
 			return nil, &IncorrectMetricTypeOrValueError{}
 		}
 		metric.Value = &value
+	default:
+		return nil, &IncorrectMetricTypeOrValueError{}
 	}
 
 	return json.Marshal(metric)

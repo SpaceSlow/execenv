@@ -8,8 +8,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/SpaceSlow/execenv/cmd/logger"
 	"github.com/SpaceSlow/execenv/cmd/metrics"
-	"github.com/SpaceSlow/execenv/cmd/middlewares"
 )
 
 type MemFileStorage struct {
@@ -37,7 +37,7 @@ func (s *MemFileStorage) SaveMetricsToFile() error {
 	if s.f == nil {
 		return errors.New("no file specified")
 	}
-	middlewares.Log.Info("saving metrics...")
+	logger.Log.Info("saving metrics...")
 
 	data, err := json.MarshalIndent(s.List(), "", "    ")
 	if err != nil {
@@ -61,15 +61,14 @@ func (s *MemFileStorage) LoadMetricsFromFile() error {
 	if err != nil || len(data) == 0 {
 		return err
 	}
-	var metricSlice []*metrics.Metric
+	var metricSlice []metrics.Metric
 	err = json.Unmarshal(data, &metricSlice)
 	if err != nil {
 		return err
 	}
 
 	for _, metric := range metricSlice {
-		err = s.MemStorage.Add(metric)
-		if err != nil {
+		if err = s.MemStorage.Add(&metric); err != nil {
 			return err
 		}
 	}
@@ -78,7 +77,7 @@ func (s *MemFileStorage) LoadMetricsFromFile() error {
 }
 
 func (s *MemFileStorage) startStoreMetricsPerSecondsTask(secs uint) {
-	middlewares.Log.Info("start store metrics task")
+	logger.Log.Info("start store metrics task")
 	closed := make(chan os.Signal, 1)
 	defer close(closed)
 	signal.Notify(closed, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
@@ -86,12 +85,11 @@ func (s *MemFileStorage) startStoreMetricsPerSecondsTask(secs uint) {
 	for {
 		select {
 		case <-closed:
-			middlewares.Log.Info("finish store metrics task")
-			os.Exit(1)
+			logger.Log.Fatal("finish store metrics task")
 		case <-time.After(interval):
 			err := s.SaveMetricsToFile()
 			if err != nil {
-				middlewares.Log.Error("not saved metrics")
+				logger.Log.Error("not saved metrics")
 			}
 		}
 	}

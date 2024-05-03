@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 
+	"github.com/SpaceSlow/execenv/cmd/logger"
 	"github.com/SpaceSlow/execenv/cmd/middlewares"
 	"github.com/SpaceSlow/execenv/cmd/routers"
 	"github.com/SpaceSlow/execenv/cmd/storages"
@@ -10,7 +11,7 @@ import (
 )
 
 func runServer(middlewareHandlers ...func(next http.Handler) http.Handler) error {
-	if err := middlewares.Initialize(zap.InfoLevel.String()); err != nil {
+	if err := logger.Initialize(zap.InfoLevel.String()); err != nil {
 		return err
 	}
 

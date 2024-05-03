@@ -4,25 +4,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/SpaceSlow/execenv/cmd/logger"
 	"go.uber.org/zap"
 )
-
-var Log = zap.NewNop()
-
-func Initialize(level string) error {
-	lvl, err := zap.ParseAtomicLevel(level)
-	if err != nil {
-		return err
-	}
-	cfg := zap.NewProductionConfig()
-	cfg.Level = lvl
-	zl, err := cfg.Build()
-	if err != nil {
-		return err
-	}
-	Log = zl
-	return nil
-}
 
 type Response struct {
 	statusCode int
@@ -61,7 +45,7 @@ func WithLogging(next http.Handler) http.Handler {
 
 		duration := time.Since(start)
 
-		Log.Info(
+		logger.Log.Info(
 			"request/response",
 			zap.String("uri", r.RequestURI),
 			zap.String("method", r.Method),

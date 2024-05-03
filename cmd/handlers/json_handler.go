@@ -13,13 +13,20 @@ type JSONMetricHandler struct {
 }
 
 func (h JSONMetricHandler) Post(res http.ResponseWriter, req *http.Request) {
-	var metric *metrics.Metric
+	var metric metrics.Metric
 	if err := json.NewDecoder(req.Body).Decode(&metric); err != nil {
 		http.Error(res, err.Error(), http.StatusBadRequest)
 		return
 	}
+	if err := req.Body.Close(); err != nil {
+		http.Error(res, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	_ = h.MetricStorage.Add(metric)
+	if err := h.MetricStorage.Add(&metric); err != nil {
+		http.Error(res, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	updMetric, _ := h.MetricStorage.Get(metric.Type, metric.Name)
 	metricJSON, err := updMetric.MarshalJSON()
@@ -37,6 +44,11 @@ func (h JSONMetricHandler) Get(res http.ResponseWriter, req *http.Request) {
 	var jsonMetric *metrics.JSONMetric
 	if err := json.NewDecoder(req.Body).Decode(&jsonMetric); err != nil {
 		http.Error(res, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := req.Body.Close(); err != nil {
+		http.Error(res, err.Error(), http.StatusInternalServerError)
 		return
 	}
 

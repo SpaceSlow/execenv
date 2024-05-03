@@ -20,7 +20,7 @@ func main() {
 	pollInterval := time.Duration(cfg.PollInterval) * time.Second
 	reportInterval := time.Duration(cfg.ReportInterval) * time.Second
 
-	pollCount := int64(0)
+	var pollCount int64
 
 	for controlInterval := reportInterval; ; controlInterval -= pollInterval {
 		if controlInterval <= time.Duration(0) {

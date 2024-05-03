@@ -35,7 +35,10 @@ func (h MetricHandler) Post(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	_ = h.MetricStorage.Add(metric)
+	if err := h.MetricStorage.Add(metric); err != nil {
+		http.Error(res, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	res.WriteHeader(http.StatusOK)
 }
