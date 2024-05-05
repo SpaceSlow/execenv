@@ -1,16 +1,19 @@
 package routers
 
 import (
+	"context"
 	"github.com/SpaceSlow/execenv/cmd/handlers"
 	"github.com/SpaceSlow/execenv/cmd/storages"
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 )
 
-func MetricRouter(storage storages.MetricStorage) chi.Router {
+func MetricRouter(ctx context.Context, storage storages.MetricStorage, conn *pgx.Conn) chi.Router {
 	r := chi.NewRouter()
 
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", handlers.MetricHandler{MetricStorage: storage}.List)
+		r.Get("/ping", handlers.DBHandler{Ctx: ctx, Conn: conn}.Ping)
 
 		r.Route("/update/", func(r chi.Router) {
 			r.Post("/{type}/{name}/{value}", handlers.MetricHandler{MetricStorage: storage}.Post)

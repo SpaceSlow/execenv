@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/SpaceSlow/execenv/cmd/logger"
 	"github.com/SpaceSlow/execenv/cmd/middlewares"
 	"github.com/SpaceSlow/execenv/cmd/routers"
 	"github.com/SpaceSlow/execenv/cmd/storages"
+	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
 )
 
@@ -25,7 +27,17 @@ func runServer(middlewareHandlers ...func(next http.Handler) http.Handler) error
 		return err
 	}
 	defer storage.Close()
-	mux := routers.MetricRouter(storage).(http.Handler)
+
+	var conn *pgx.Conn
+	if cfg.DatabaseDSN != "" {
+		conn, err = pgx.Connect(context.Background(), cfg.DatabaseDSN)
+		if err != nil {
+			return err
+		}
+		defer conn.Close(context.Background())
+	}
+
+	mux := routers.MetricRouter(context.Background(), storage, conn).(http.Handler)
 	for _, middleware := range middlewareHandlers {
 		mux = middleware(mux)
 	}

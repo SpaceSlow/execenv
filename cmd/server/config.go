@@ -12,6 +12,7 @@ type Config struct {
 	StoreInterval uint             `env:"STORE_INTERVAL"`
 	StoragePath   string           `env:"FILE_STORAGE_PATH"`
 	NeededRestore bool             `env:"RESTORE"`
+	DatabaseDSN   string           `env:"DATABASE_DSN"`
 }
 
 func GetConfigWithFlags() (*Config, error) {
@@ -33,6 +34,10 @@ func GetConfigWithFlags() (*Config, error) {
 	}
 	if _, ok := os.LookupEnv("RESTORE"); !ok {
 		cfg.NeededRestore = flagNeedRestore
+	}
+
+	if cfg.DatabaseDSN == "" {
+		cfg.DatabaseDSN = flagDatabaseDSN
 	}
 
 	return cfg, nil
