@@ -1,12 +1,17 @@
 package main
 
 import (
+	"os"
+
 	"github.com/SpaceSlow/execenv/cmd/flags"
 	"github.com/caarlos0/env"
 )
 
 type Config struct {
-	ServerAddr flags.NetAddress `env:"ADDRESS"`
+	ServerAddr    flags.NetAddress `env:"ADDRESS"`
+	StoreInterval uint             `env:"STORE_INTERVAL"`
+	StoragePath   string           `env:"FILE_STORAGE_PATH"`
+	NeededRestore bool             `env:"RESTORE"`
 }
 
 func GetConfigWithFlags() (*Config, error) {
@@ -19,6 +24,15 @@ func GetConfigWithFlags() (*Config, error) {
 
 	if cfg.ServerAddr.String() == "" {
 		cfg.ServerAddr = flagRunAddr
+	}
+	if _, ok := os.LookupEnv("STORE_INTERVAL"); !ok {
+		cfg.StoreInterval = flagStoreInterval
+	}
+	if _, ok := os.LookupEnv("FILE_STORAGE_PATH"); !ok {
+		cfg.StoragePath = flagStoragePath
+	}
+	if _, ok := os.LookupEnv("RESTORE"); !ok {
+		cfg.NeededRestore = flagNeedRestore
 	}
 
 	return cfg, nil

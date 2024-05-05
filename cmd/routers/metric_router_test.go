@@ -1,6 +1,8 @@
 package routers
 
 import (
+	"bytes"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -14,14 +16,17 @@ import (
 )
 
 type fields struct {
-	method  string
-	storage storages.MetricStorage
-	path    string
+	method     string
+	storage    storages.MetricStorage
+	path       string
+	jsonMetric *metrics.JSONMetric
 }
+
 type want struct {
 	statusCode int
 	metric     *metrics.Metric
 }
+
 type testCase struct {
 	name   string
 	fields fields
@@ -29,7 +34,6 @@ type testCase struct {
 }
 
 func newMemStorageWithMetrics(metrics []metrics.Metric) *storages.MemStorage {
-
 	storage := storages.NewMemStorage()
 
 	for _, metric := range metrics {
@@ -55,6 +59,10 @@ func requireEqualExistingMetricsWithResponse(t *testing.T, test testCase, res *h
 	require.ElementsMatch(t, metricStrings, lines)
 }
 
+func getAddress[T int64 | float64](v T) *T {
+	return &v
+}
+
 func TestMetricRouter(t *testing.T) {
 	tests := []testCase{
 		{
@@ -64,8 +72,7 @@ func TestMetricRouter(t *testing.T) {
 				path:   "/update/unknown_type/metric/42",
 			},
 			want: want{
-				http.StatusBadRequest,
-				nil,
+				statusCode: http.StatusBadRequest,
 			},
 		},
 		{
@@ -75,8 +82,7 @@ func TestMetricRouter(t *testing.T) {
 				path:   "/update/",
 			},
 			want: want{
-				http.StatusBadRequest,
-				nil,
+				statusCode: http.StatusBadRequest,
 			},
 		},
 		{
@@ -86,8 +92,7 @@ func TestMetricRouter(t *testing.T) {
 				path:   "/",
 			},
 			want: want{
-				http.StatusBadRequest,
-				nil,
+				statusCode: http.StatusMethodNotAllowed,
 			},
 		},
 		{
@@ -99,7 +104,6 @@ func TestMetricRouter(t *testing.T) {
 			},
 			want: want{
 				statusCode: http.StatusMethodNotAllowed,
-				metric:     nil,
 			},
 		},
 		{
@@ -111,7 +115,6 @@ func TestMetricRouter(t *testing.T) {
 			},
 			want: want{
 				statusCode: http.StatusNotFound,
-				metric:     nil,
 			},
 		},
 		{
@@ -123,7 +126,6 @@ func TestMetricRouter(t *testing.T) {
 			},
 			want: want{
 				statusCode: http.StatusBadRequest,
-				metric:     nil,
 			},
 		},
 		{
@@ -135,7 +137,6 @@ func TestMetricRouter(t *testing.T) {
 			},
 			want: want{
 				statusCode: http.StatusBadRequest,
-				metric:     nil,
 			},
 		},
 		{
@@ -147,7 +148,6 @@ func TestMetricRouter(t *testing.T) {
 			},
 			want: want{
 				statusCode: http.StatusBadRequest,
-				metric:     nil,
 			},
 		},
 		{
@@ -159,7 +159,6 @@ func TestMetricRouter(t *testing.T) {
 			},
 			want: want{
 				statusCode: http.StatusBadRequest,
-				metric:     nil,
 			},
 		},
 		{
@@ -253,7 +252,6 @@ func TestMetricRouter(t *testing.T) {
 			},
 			want: want{
 				statusCode: http.StatusNotFound,
-				metric:     nil,
 			},
 		},
 		{
@@ -271,7 +269,6 @@ func TestMetricRouter(t *testing.T) {
 			},
 			want: want{
 				statusCode: http.StatusNotFound,
-				metric:     nil,
 			},
 		},
 		{
@@ -294,7 +291,122 @@ func TestMetricRouter(t *testing.T) {
 			},
 			want: want{
 				statusCode: http.StatusOK,
-				metric:     nil,
+			},
+		},
+		{
+			name: "update counter metric via json request",
+			fields: fields{
+				method: http.MethodPost,
+				storage: newMemStorageWithMetrics([]metrics.Metric{
+					{
+						Type:  metrics.Counter,
+						Name:  "PollCount",
+						Value: int64(10),
+					},
+				}),
+				path: "/update/",
+				jsonMetric: &metrics.JSONMetric{
+					ID:    "PollCount",
+					MType: "counter",
+					Delta: getAddress(int64(5)),
+				},
+			},
+			want: want{
+				statusCode: http.StatusOK,
+				metric: &metrics.Metric{
+					Type:  metrics.Counter,
+					Name:  "PollCount",
+					Value: int64(15),
+				},
+			},
+		},
+		{
+			name: "update incorrect metric type via json request",
+			fields: fields{
+				method:  http.MethodPost,
+				storage: storages.NewMemStorage(),
+				path:    "/update/",
+				jsonMetric: &metrics.JSONMetric{
+					ID:    "PollCount",
+					MType: "incorrect_type",
+					Delta: getAddress(int64(5)),
+				},
+			},
+			want: want{
+				statusCode: http.StatusBadRequest,
+			},
+		},
+		{
+			name: "incorrect filled fields in json request (Delta in Gauge)",
+			fields: fields{
+				method:  http.MethodPost,
+				storage: storages.NewMemStorage(),
+				path:    "/update/",
+				jsonMetric: &metrics.JSONMetric{
+					ID:    "RandomValue",
+					MType: "gauge",
+					Delta: getAddress(int64(5)),
+				},
+			},
+			want: want{
+				statusCode: http.StatusBadRequest,
+			},
+		},
+		{
+			name: "incorrect filled fields in json request (Value in Counter)",
+			fields: fields{
+				method:  http.MethodPost,
+				storage: storages.NewMemStorage(),
+				path:    "/update/",
+				jsonMetric: &metrics.JSONMetric{
+					ID:    "PollCount",
+					MType: "counter",
+					Value: getAddress(117.9),
+				},
+			},
+			want: want{
+				statusCode: http.StatusBadRequest,
+			},
+		},
+		{
+			name: "get not-existing metric via json request",
+			fields: fields{
+				method:  http.MethodPost,
+				storage: storages.NewMemStorage(),
+				path:    "/value/",
+				jsonMetric: &metrics.JSONMetric{
+					ID:    "PollCount",
+					MType: "counter",
+				},
+			},
+			want: want{
+				statusCode: http.StatusNotFound,
+			},
+		},
+		{
+			name: "get existing metric via json request",
+			fields: fields{
+				method: http.MethodPost,
+				storage: newMemStorageWithMetrics([]metrics.Metric{
+					{
+						Type:  metrics.Counter,
+						Name:  "PollCount",
+						Value: int64(10),
+					},
+				}),
+				path: "/value/",
+				jsonMetric: &metrics.JSONMetric{
+					ID:    "PollCount",
+					MType: "counter",
+				},
+			},
+			want: want{
+				statusCode: http.StatusOK,
+				metric: &metrics.Metric{
+					Type:  metrics.Counter,
+					Name:  "PollCount",
+					Value: int64(10),
+				},
 			},
 		},
 	}
@@ -303,7 +415,16 @@ func TestMetricRouter(t *testing.T) {
 			ts := httptest.NewServer(MetricRouter(test.fields.storage))
 			defer ts.Close()
 
-			req, err := http.NewRequest(test.fields.method, ts.URL+test.fields.path, nil)
+			var body io.Reader
+
+			isJSONRequest := (test.fields.path == "/update/" || test.fields.path == "/value/") && test.fields.jsonMetric != nil
+			if isJSONRequest {
+				m, err := json.Marshal(test.fields.jsonMetric)
+				require.NoError(t, err)
+				body = bytes.NewReader(m)
+			}
+
+			req, err := http.NewRequest(test.fields.method, ts.URL+test.fields.path, body)
 			require.NoError(t, err)
 
 			res, err := ts.Client().Do(req)
@@ -318,6 +439,19 @@ func TestMetricRouter(t *testing.T) {
 			if test.fields.path == "/" {
 				requireEqualExistingMetricsWithResponse(t, test, res)
 				return
+			}
+
+			if isJSONRequest {
+				var data []byte
+				data, err := io.ReadAll(res.Body)
+				require.NoError(t, err)
+
+				var m metrics.Metric
+				require.NoError(t, m.UnmarshalJSON(data))
+
+				assert.Equal(t, m.Type, test.want.metric.Type)
+				assert.Equal(t, m.Name, test.want.metric.Name)
+				assert.Equal(t, m.Value, test.want.metric.Value)
 			}
 
 			storagedMetric, ok := test.fields.storage.Get(test.want.metric.Type, test.want.metric.Name)

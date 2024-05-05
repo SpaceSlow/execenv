@@ -26,3 +26,7 @@ vendor/
 
 # Auto-tests by YandexPracticum
 metricstest-*
+statictest-*
+
+# MacOS
+.DS_Store
