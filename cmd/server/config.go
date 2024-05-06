@@ -36,7 +36,7 @@ func GetConfigWithFlags() (*Config, error) {
 		cfg.NeededRestore = flagNeedRestore
 	}
 
-	if cfg.DatabaseDSN == "" {
+	if _, ok := os.LookupEnv("DATABASE_DSN"); !ok {
 		cfg.DatabaseDSN = flagDatabaseDSN
 	}
 

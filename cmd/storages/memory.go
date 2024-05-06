@@ -88,3 +88,7 @@ func (storage *MemStorage) List() []metrics.Metric {
 
 	return metricSlice
 }
+
+func (storage *MemStorage) Close() error {
+	return nil
+}

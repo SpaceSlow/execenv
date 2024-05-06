@@ -1,20 +1,23 @@
 package handlers
 
 import (
-	"context"
-	"github.com/jackc/pgx/v5"
 	"net/http"
+
+	"github.com/SpaceSlow/execenv/cmd/storages"
 )
 
 type DBHandler struct {
-	Ctx  context.Context
-	Conn *pgx.Conn
+	MetricStorage storages.MetricStorage
 }
 
 func (h DBHandler) Ping(res http.ResponseWriter, _ *http.Request) {
-	if h.Conn != nil && h.Conn.Ping(h.Ctx) == nil {
-		res.WriteHeader(http.StatusOK)
-		return
+	switch h.MetricStorage.(type) {
+	case storages.DBStorage:
+		storage := h.MetricStorage.(storages.DBStorage)
+		if storage.CheckConnection() {
+			res.WriteHeader(http.StatusOK)
+			return
+		}
 	}
 	res.WriteHeader(http.StatusInternalServerError)
 }

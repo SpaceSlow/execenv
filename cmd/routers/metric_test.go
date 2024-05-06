@@ -412,7 +412,7 @@ func TestMetricRouter(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ts := httptest.NewServer(MetricRouter(nil, test.fields.storage, nil))
+			ts := httptest.NewServer(MetricRouter(test.fields.storage))
 			defer ts.Close()
 
 			var body io.Reader
