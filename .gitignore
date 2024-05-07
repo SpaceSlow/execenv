@@ -30,3 +30,6 @@ statictest-*
 
 # MacOS
 .DS_Store
+
+# json-files
+*.json

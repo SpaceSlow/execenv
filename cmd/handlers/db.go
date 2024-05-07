@@ -12,8 +12,8 @@ type DBHandler struct {
 
 func (h DBHandler) Ping(res http.ResponseWriter, _ *http.Request) {
 	switch h.MetricStorage.(type) {
-	case storages.DBStorage:
-		storage := h.MetricStorage.(storages.DBStorage)
+	case *storages.DBStorage:
+		storage := h.MetricStorage.(*storages.DBStorage)
 		if storage.CheckConnection() {
 			res.WriteHeader(http.StatusOK)
 			return
