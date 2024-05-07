@@ -67,6 +67,8 @@ func (s DBStorage) List() []metrics.Metric {
 		return make([]metrics.Metric, 0)
 	}
 
+	defer rows.Close()
+
 	metricSlice := make([]metrics.Metric, 0)
 	var (
 		name    string
