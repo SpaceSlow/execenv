@@ -3,8 +3,9 @@ package storages
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"github.com/SpaceSlow/execenv/cmd/metrics"
-	_ "github.com/jackc/pgx/v5"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 type DBStorage struct {
@@ -13,39 +14,51 @@ type DBStorage struct {
 }
 
 func (s DBStorage) Add(metric *metrics.Metric) error {
-	//TODO implement me
-	panic("implement me")
+	var err error
+	switch metric.Type {
+	case metrics.Gauge:
+		_, err = s.db.ExecContext(s.ctx, "INSERT INTO metrics (name, is_gauge, delta) VALUES ($1, TRUE, $2) ON CONFLICT (name) DO UPDATE SET delta=excluded.delta;", metric.Name, metric.Value.(float64))
+	case metrics.Counter:
+		row := s.db.QueryRowContext(s.ctx, "SELECT value FROM metrics WHERE (name=$1 AND is_gauge=FALSE) LIMIT 1;", metric.Name)
+		var prevValue int64
+		err := row.Scan(&prevValue)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+		_, err = s.db.ExecContext(s.ctx, "INSERT INTO metrics (name, is_gauge, value) VALUES ($1, FALSE, $2) ON CONFLICT (name) DO UPDATE SET value=excluded.value;", metric.Name, metric.Value.(int64)+prevValue)
+	default:
+		err = &metrics.IncorrectMetricTypeOrValueError{}
+	}
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s DBStorage) Get(metricType metrics.MetricType, name string) (*metrics.Metric, bool) {
-	rows, err := s.db.QueryContext(s.ctx, "SELECT is_gauge, delta, value FROM metrics WHERE name = $1 LIMIT 1;", name)
-	if err != nil {
-		return nil, false
-	}
-
 	var (
-		isGauge bool
-		delta   float64
-		value   int64
+		row   *sql.Row
+		value interface{}
 	)
-	if err := rows.Scan(&isGauge, &delta, &value); err != nil {
+
+	switch metricType {
+	case metrics.Gauge:
+		row = s.db.QueryRowContext(s.ctx, "SELECT delta FROM metrics WHERE (name = $1 AND is_gauge=TRUE) LIMIT 1;", name)
+	case metrics.Counter:
+		row = s.db.QueryRowContext(s.ctx, "SELECT value FROM metrics WHERE (name = $1 AND is_gauge=FALSE) LIMIT 1;", name)
+	default:
 		return nil, false
 	}
 
-	if isGauge && metricType == metrics.Gauge {
-		return &metrics.Metric{
-			Type:  metricType,
-			Name:  name,
-			Value: delta,
-		}, true
-	} else if !isGauge && metricType == metrics.Counter {
-		return &metrics.Metric{
-			Type:  metricType,
-			Name:  name,
-			Value: value,
-		}, true
+	if err := row.Scan(&value); err != nil {
+		return nil, false
 	}
-	return nil, false
+
+	return &metrics.Metric{
+		Type:  metricType,
+		Name:  name,
+		Value: value,
+	}, true
 }
 
 func (s DBStorage) List() []metrics.Metric {
@@ -96,7 +109,7 @@ func (s DBStorage) CheckConnection() bool {
 }
 
 func NewDBStorage(ctx context.Context, dsn string) (*DBStorage, error) {
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("pgx", dsn)
 
 	if err != nil {
 		return nil, err
@@ -120,27 +133,23 @@ func NewDBStorage(ctx context.Context, dsn string) (*DBStorage, error) {
 }
 
 func checkExistMetricTable(ctx context.Context, db *sql.DB) (bool, error) {
-	rows, err := db.QueryContext(ctx, "SELECT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename  = 'metrics');")
-	if err != nil {
-		return false, err
-	}
+	row := db.QueryRowContext(ctx, "SELECT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename  = 'metrics');")
 
 	var tableExist bool
-	if err := rows.Scan(&tableExist); err != nil {
+	if err := row.Scan(&tableExist); err != nil {
 		return false, err
 	}
-	return true, nil
+	return tableExist, nil
 }
 
 func createMetricsTable(ctx context.Context, db *sql.DB) error {
 	_, err := db.ExecContext(ctx, `
-		CREATE TABLE metrics 
-		(
+		CREATE TABLE metrics (
 			id 			SERIAL PRIMARY KEY,
-			name 		VARCHAR(30),
-			is_gauge 	BOOLEAN,
+			name 		VARCHAR(30) UNIQUE NOT NULL,
+			is_gauge 	BOOLEAN NOT NULL,
 			delta 		DOUBLE PRECISION,
-			value		INTEGER,
+			value		INTEGER
 		);
 		`)
 
