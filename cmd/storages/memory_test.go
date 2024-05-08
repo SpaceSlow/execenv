@@ -142,7 +142,7 @@ func TestMemStorage_Add(t *testing.T) {
 			storage.counters = test.fields.counters
 			storage.gauges = test.fields.gauges
 
-			err := storage.Add(&test.fields.metric)
+			_, err := storage.Add(&test.fields.metric)
 			assert.Equal(t, err != nil, test.want.err)
 
 			if err != nil {

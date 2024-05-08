@@ -18,12 +18,23 @@ type MemFileStorage struct {
 	isSyncStore bool
 }
 
-func (s *MemFileStorage) Add(metric *metrics.Metric) error {
-	err := s.MemStorage.Add(metric)
-	if err != nil || !s.isSyncStore {
-		return err
+func (s *MemFileStorage) Add(metric *metrics.Metric) (*metrics.Metric, error) {
+	updMetric, err := s.MemStorage.Add(metric)
+	if err != nil {
+		return nil, err
 	}
-	return s.SaveMetricsToFile()
+	if !s.isSyncStore {
+		return updMetric, nil
+	}
+	return updMetric, s.SaveMetricsToFile()
+}
+
+func (s *MemFileStorage) Batch(metricSlice []metrics.Metric) ([]metrics.Metric, error) {
+	updMetrics, err := s.MemStorage.Batch(metricSlice)
+	if err != nil || !s.isSyncStore {
+		return updMetrics, err
+	}
+	return updMetrics, s.SaveMetricsToFile()
 }
 
 func (s *MemFileStorage) Close() error {
@@ -68,7 +79,7 @@ func (s *MemFileStorage) LoadMetricsFromFile() error {
 	}
 
 	for _, metric := range metricSlice {
-		if err = s.MemStorage.Add(&metric); err != nil {
+		if _, err = s.MemStorage.Add(&metric); err != nil {
 			return err
 		}
 	}

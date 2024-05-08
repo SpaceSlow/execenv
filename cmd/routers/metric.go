@@ -18,6 +18,7 @@ func MetricRouter(storage storages.MetricStorage) chi.Router {
 			r.Post("/{type}/{name}/", handlers.BadRequestHandlerFunc)
 			r.Post("/", handlers.JSONMetricHandler{MetricStorage: storage}.Post)
 		})
+		r.Post("/updates/", handlers.JSONMetricHandler{MetricStorage: storage}.BatchPost)
 		r.Route("/value/", func(r chi.Router) {
 			r.Get("/{type}/{name}", handlers.MetricHandler{MetricStorage: storage}.Get)
 			r.Post("/", handlers.JSONMetricHandler{MetricStorage: storage}.Get)

@@ -13,26 +13,88 @@ type DBStorage struct {
 	db  *sql.DB
 }
 
-func (s DBStorage) Add(metric *metrics.Metric) error {
-	var err error
+func (s DBStorage) Add(metric *metrics.Metric) (*metrics.Metric, error) {
+	var (
+		updMetric *metrics.Metric
+		err       error
+	)
 	switch metric.Type {
 	case metrics.Gauge:
 		_, err = s.db.ExecContext(s.ctx, "INSERT INTO metrics (name, is_gauge, delta) VALUES ($1, TRUE, $2) ON CONFLICT (name) DO UPDATE SET delta=excluded.delta;", metric.Name, metric.Value.(float64))
+		if err != nil {
+			return nil, err
+		}
+		updMetric = metric.Copy()
 	case metrics.Counter:
 		row := s.db.QueryRowContext(s.ctx, "SELECT value FROM metrics WHERE (name=$1 AND is_gauge=FALSE) LIMIT 1;", metric.Name)
 		var prevValue int64
 		err := row.Scan(&prevValue)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return err
+			return nil, err
 		}
-		_, err = s.db.ExecContext(s.ctx, "INSERT INTO metrics (name, is_gauge, value) VALUES ($1, FALSE, $2) ON CONFLICT (name) DO UPDATE SET value=excluded.value;", metric.Name, metric.Value.(int64)+prevValue)
+		updValue := metric.Value.(int64) + prevValue
+		_, err = s.db.ExecContext(s.ctx, "INSERT INTO metrics (name, is_gauge, value) VALUES ($1, FALSE, $2) ON CONFLICT (name) DO UPDATE SET value=excluded.value;", metric.Name, updValue)
+
+		updMetric = metric.Copy()
+		updMetric.Value = updValue
+		if err != nil {
+			return nil, err
+		}
 	default:
 		err = &metrics.IncorrectMetricTypeOrValueError{}
 	}
+	return updMetric, nil
+}
+
+func (s DBStorage) Batch(metricSlice []metrics.Metric) ([]metrics.Metric, error) {
+	// TODO написать добавление одним запросом
+
+	tx, err := s.db.Begin()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+
+	updMetrics := make([]metrics.Metric, 0, len(metricSlice))
+	for _, metric := range metricSlice {
+		var (
+			updMetric *metrics.Metric
+			err       error
+		)
+		switch metric.Type {
+		case metrics.Gauge:
+			_, err = tx.ExecContext(s.ctx, "INSERT INTO metrics (name, is_gauge, delta) VALUES ($1, TRUE, $2) ON CONFLICT (name) DO UPDATE SET delta=excluded.delta;", metric.Name, metric.Value.(float64))
+			if err != nil {
+				return nil, err
+			}
+			updMetric = metric.Copy()
+		case metrics.Counter:
+			row := tx.QueryRowContext(s.ctx, "SELECT value FROM metrics WHERE (name=$1 AND is_gauge=FALSE) LIMIT 1;", metric.Name)
+			var prevValue int64
+			err := row.Scan(&prevValue)
+			if err != nil && !errors.Is(err, sql.ErrNoRows) {
+				return nil, err
+			}
+			updValue := metric.Value.(int64) + prevValue
+			_, err = tx.ExecContext(s.ctx, "INSERT INTO metrics (name, is_gauge, value) VALUES ($1, FALSE, $2) ON CONFLICT (name) DO UPDATE SET value=excluded.value;", metric.Name, updValue)
+
+			updMetric = metric.Copy()
+			updMetric.Value = updValue
+			if err != nil {
+				return nil, err
+			}
+		default:
+			err = &metrics.IncorrectMetricTypeOrValueError{}
+		}
+		if err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+		updMetrics = append(updMetrics, *updMetric)
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return updMetrics, nil
 }
 
 func (s DBStorage) Get(metricType metrics.MetricType, name string) (*metrics.Metric, bool) {
@@ -73,8 +135,8 @@ func (s DBStorage) List() []metrics.Metric {
 	var (
 		name    string
 		isGauge bool
-		delta   float64
-		value   int64
+		delta   *float64
+		value   *int64
 	)
 	for rows.Next() {
 		m := metrics.Metric{}
@@ -85,10 +147,10 @@ func (s DBStorage) List() []metrics.Metric {
 
 		if isGauge {
 			m.Type = metrics.Gauge
-			m.Value = delta
+			m.Value = *delta
 		} else {
 			m.Type = metrics.Counter
-			m.Value = value
+			m.Value = *value
 		}
 		m.Name = name
 

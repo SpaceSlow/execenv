@@ -16,28 +16,33 @@ func NewMemStorage() *MemStorage {
 	return &MemStorage{counters: make(map[string]int64), gauges: make(map[string]float64)}
 }
 
-func (storage *MemStorage) Add(metric *metrics.Metric) error {
+func (storage *MemStorage) Add(metric *metrics.Metric) (*metrics.Metric, error) {
 	storage.mu.Lock()
 	defer storage.mu.Unlock()
 
+	var updMetric *metrics.Metric
 	switch metric.Type {
 	case metrics.Counter:
 		prevValue := storage.counters[metric.Name]
 		value, ok := metric.Value.(int64)
 		if !ok {
-			return &metrics.IncorrectMetricTypeOrValueError{}
+			return nil, &metrics.IncorrectMetricTypeOrValueError{}
 		}
-		storage.counters[metric.Name] = prevValue + value
+		updValue := prevValue + value
+		updMetric = metric.Copy()
+		updMetric.Value = updValue
+		storage.counters[metric.Name] = updValue
 	case metrics.Gauge:
 		value, ok := metric.Value.(float64)
 		if !ok {
-			return &metrics.IncorrectMetricTypeOrValueError{}
+			return nil, &metrics.IncorrectMetricTypeOrValueError{}
 		}
+		updMetric = metric.Copy()
 		storage.gauges[metric.Name] = value
 	default:
-		return &metrics.IncorrectMetricTypeOrValueError{}
+		return nil, &metrics.IncorrectMetricTypeOrValueError{}
 	}
-	return nil
+	return updMetric, nil
 }
 
 func (storage *MemStorage) Get(metricType metrics.MetricType, name string) (*metrics.Metric, bool) {
@@ -91,4 +96,16 @@ func (storage *MemStorage) List() []metrics.Metric {
 
 func (storage *MemStorage) Close() error {
 	return nil
+}
+
+func (storage *MemStorage) Batch(metricSlice []metrics.Metric) ([]metrics.Metric, error) {
+	updMetrics := make([]metrics.Metric, 0, len(metricSlice))
+	for _, metric := range metricSlice {
+		updMetric, err := storage.Add(&metric)
+		if err != nil {
+			return updMetrics, err
+		}
+		updMetrics = append(updMetrics, *updMetric)
+	}
+	return updMetrics, nil
 }

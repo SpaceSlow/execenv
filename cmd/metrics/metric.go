@@ -90,6 +90,11 @@ func (m *Metric) ValueAsString() string {
 	}
 }
 
+func (m *Metric) Copy() *Metric {
+	metric, _ := NewMetric(m.Type, m.Name, m.ValueAsString())
+	return metric
+}
+
 func NewMetric(metricType MetricType, name, value string) (*Metric, error) {
 	var err error
 	var val interface{}
