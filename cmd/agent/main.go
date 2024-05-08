@@ -20,31 +20,31 @@ func main() {
 	pollInterval := time.Duration(cfg.PollInterval) * time.Second
 	reportInterval := time.Duration(cfg.ReportInterval) * time.Second
 
+	pollTick := time.Tick(pollInterval)
+	reportTick := time.Tick(reportInterval)
 	var pollCount int64
 
-	for controlInterval := reportInterval; ; controlInterval -= pollInterval {
-		if controlInterval <= time.Duration(0) {
+	for {
+		select {
+		case <-pollTick:
+			pollCount++
+			metricSlice = metrics.GetRuntimeMetrics()
+			metricSlice = append(
+				metricSlice,
+				metrics.Metric{
+					Type:  metrics.Gauge,
+					Name:  "RandomValue",
+					Value: rand.Float64(),
+				},
+				metrics.Metric{
+					Type:  metrics.Counter,
+					Name:  "PollCount",
+					Value: pollCount,
+				},
+			)
+		case <-reportTick:
 			metrics.SendMetrics(url, metricSlice)
 			pollCount = 0
-			controlInterval = reportInterval
 		}
-
-		pollCount++
-		metricSlice = metrics.GetRuntimeMetrics()
-		metricSlice = append(
-			metricSlice,
-			metrics.Metric{
-				Type:  metrics.Gauge,
-				Name:  "RandomValue",
-				Value: rand.Float64(),
-			},
-			metrics.Metric{
-				Type:  metrics.Counter,
-				Name:  "PollCount",
-				Value: pollCount,
-			},
-		)
-
-		time.Sleep(pollInterval)
 	}
 }
