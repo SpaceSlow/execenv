@@ -16,7 +16,7 @@ func main() {
 
 	var metricSlice []metrics.Metric
 
-	url := "http://" + cfg.ServerAddr.String() + "/update/"
+	url := "http://" + cfg.ServerAddr.String() + "/updates/"
 	pollInterval := time.Duration(cfg.PollInterval) * time.Second
 	reportInterval := time.Duration(cfg.ReportInterval) * time.Second
 

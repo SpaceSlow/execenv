@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+
 	"github.com/SpaceSlow/execenv/cmd/metrics"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -20,20 +21,20 @@ func (s DBStorage) Add(metric *metrics.Metric) (*metrics.Metric, error) {
 	)
 	switch metric.Type {
 	case metrics.Gauge:
-		_, err = s.db.ExecContext(s.ctx, "INSERT INTO metrics (name, is_gauge, delta) VALUES ($1, TRUE, $2) ON CONFLICT (name) DO UPDATE SET delta=excluded.delta;", metric.Name, metric.Value.(float64))
+		_, err = s.db.ExecContext(s.ctx, "INSERT INTO metrics (name, is_gauge, value) VALUES ($1, TRUE, $2) ON CONFLICT (name) DO UPDATE SET value=excluded.value;", metric.Name, metric.Value.(float64))
 		if err != nil {
 			return nil, err
 		}
 		updMetric = metric.Copy()
 	case metrics.Counter:
-		row := s.db.QueryRowContext(s.ctx, "SELECT value FROM metrics WHERE (name=$1 AND is_gauge=FALSE) LIMIT 1;", metric.Name)
+		row := s.db.QueryRowContext(s.ctx, "SELECT delta FROM metrics WHERE (name=$1 AND is_gauge=FALSE) LIMIT 1;", metric.Name)
 		var prevValue int64
 		err := row.Scan(&prevValue)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return nil, err
 		}
 		updValue := metric.Value.(int64) + prevValue
-		_, err = s.db.ExecContext(s.ctx, "INSERT INTO metrics (name, is_gauge, value) VALUES ($1, FALSE, $2) ON CONFLICT (name) DO UPDATE SET value=excluded.value;", metric.Name, updValue)
+		_, err = s.db.ExecContext(s.ctx, "INSERT INTO metrics (name, is_gauge, delta) VALUES ($1, FALSE, $2) ON CONFLICT (name) DO UPDATE SET delta=excluded.delta;", metric.Name, updValue)
 
 		updMetric = metric.Copy()
 		updMetric.Value = updValue
@@ -47,8 +48,6 @@ func (s DBStorage) Add(metric *metrics.Metric) (*metrics.Metric, error) {
 }
 
 func (s DBStorage) Batch(metricSlice []metrics.Metric) ([]metrics.Metric, error) {
-	// TODO написать добавление одним запросом
-
 	tx, err := s.db.Begin()
 	if err != nil {
 		return nil, err
@@ -62,20 +61,20 @@ func (s DBStorage) Batch(metricSlice []metrics.Metric) ([]metrics.Metric, error)
 		)
 		switch metric.Type {
 		case metrics.Gauge:
-			_, err = tx.ExecContext(s.ctx, "INSERT INTO metrics (name, is_gauge, delta) VALUES ($1, TRUE, $2) ON CONFLICT (name) DO UPDATE SET delta=excluded.delta;", metric.Name, metric.Value.(float64))
+			_, err = tx.ExecContext(s.ctx, "INSERT INTO metrics (name, is_gauge, value) VALUES ($1, TRUE, $2) ON CONFLICT (name) DO UPDATE SET value=excluded.value;", metric.Name, metric.Value.(float64))
 			if err != nil {
 				return nil, err
 			}
 			updMetric = metric.Copy()
 		case metrics.Counter:
-			row := tx.QueryRowContext(s.ctx, "SELECT value FROM metrics WHERE (name=$1 AND is_gauge=FALSE) LIMIT 1;", metric.Name)
+			row := tx.QueryRowContext(s.ctx, "SELECT delta FROM metrics WHERE (name=$1 AND is_gauge=FALSE) LIMIT 1;", metric.Name)
 			var prevValue int64
 			err := row.Scan(&prevValue)
 			if err != nil && !errors.Is(err, sql.ErrNoRows) {
 				return nil, err
 			}
 			updValue := metric.Value.(int64) + prevValue
-			_, err = tx.ExecContext(s.ctx, "INSERT INTO metrics (name, is_gauge, value) VALUES ($1, FALSE, $2) ON CONFLICT (name) DO UPDATE SET value=excluded.value;", metric.Name, updValue)
+			_, err = tx.ExecContext(s.ctx, "INSERT INTO metrics (name, is_gauge, delta) VALUES ($1, FALSE, $2) ON CONFLICT (name) DO UPDATE SET delta=excluded.delta;", metric.Name, updValue)
 
 			updMetric = metric.Copy()
 			updMetric.Value = updValue
@@ -105,9 +104,9 @@ func (s DBStorage) Get(metricType metrics.MetricType, name string) (*metrics.Met
 
 	switch metricType {
 	case metrics.Gauge:
-		row = s.db.QueryRowContext(s.ctx, "SELECT delta FROM metrics WHERE (name = $1 AND is_gauge=TRUE) LIMIT 1;", name)
+		row = s.db.QueryRowContext(s.ctx, "SELECT value FROM metrics WHERE (name = $1 AND is_gauge=TRUE) LIMIT 1;", name)
 	case metrics.Counter:
-		row = s.db.QueryRowContext(s.ctx, "SELECT value FROM metrics WHERE (name = $1 AND is_gauge=FALSE) LIMIT 1;", name)
+		row = s.db.QueryRowContext(s.ctx, "SELECT delta FROM metrics WHERE (name = $1 AND is_gauge=FALSE) LIMIT 1;", name)
 	default:
 		return nil, false
 	}
@@ -135,8 +134,8 @@ func (s DBStorage) List() []metrics.Metric {
 	var (
 		name    string
 		isGauge bool
-		delta   *float64
-		value   *int64
+		delta   *int64
+		value   *float64
 	)
 	for rows.Next() {
 		m := metrics.Metric{}
@@ -147,10 +146,10 @@ func (s DBStorage) List() []metrics.Metric {
 
 		if isGauge {
 			m.Type = metrics.Gauge
-			m.Value = *delta
+			m.Value = *value
 		} else {
 			m.Type = metrics.Counter
-			m.Value = *value
+			m.Value = *delta
 		}
 		m.Name = name
 
@@ -212,8 +211,8 @@ func createMetricsTable(ctx context.Context, db *sql.DB) error {
 			id 			SERIAL PRIMARY KEY,
 			name 		VARCHAR(30) UNIQUE NOT NULL,
 			is_gauge 	BOOLEAN NOT NULL,
-			delta 		DOUBLE PRECISION,
-			value		INTEGER
+			delta 		INTEGER,
+			value		DOUBLE PRECISION
 		);
 		`)
 
