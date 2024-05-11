@@ -43,8 +43,31 @@ func main() {
 				},
 			)
 		case <-reportTick:
-			metrics.SendMetrics(url, metricSlice)
+			err := metrics.SendMetrics(url, metricSlice)
+			if err != nil {
+				go retrySendMetrics(url, metricSlice)
+			}
 			pollCount = 0
+		}
+	}
+}
+
+func retrySendMetrics(url string, metricSlice []metrics.Metric) error {
+	delays := []time.Duration{
+		time.Second,
+		3 * time.Second,
+		5 * time.Second,
+	}
+	attempt := 0
+	for {
+		select {
+		case <-time.After(delays[attempt]):
+			err := metrics.SendMetrics(url, metricSlice)
+			if err != nil && attempt < len(delays)-1 {
+				attempt++
+			} else {
+				return err
+			}
 		}
 	}
 }

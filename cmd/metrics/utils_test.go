@@ -90,10 +90,10 @@ func TestSendMetrics(t *testing.T) {
 				dBody, err := gzip.NewReader(r.Body)
 				require.NoError(t, err)
 
-				var m JSONMetric
+				var m []JSONMetric
 				require.NoError(t, json.NewDecoder(dBody).Decode(&m))
 
-				receivedMetrics = append(receivedMetrics, m)
+				receivedMetrics = append(receivedMetrics, m...)
 			}))
 			defer testServer.Close()
 

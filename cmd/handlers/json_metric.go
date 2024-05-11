@@ -70,6 +70,8 @@ func (h JSONMetricHandler) BatchPost(res http.ResponseWriter, req *http.Request)
 
 func (h JSONMetricHandler) Get(res http.ResponseWriter, req *http.Request) {
 	var jsonMetric *metrics.JSONMetric
+	res.Header().Set("Content-Type", "application/json")
+
 	if err := json.NewDecoder(req.Body).Decode(&jsonMetric); err != nil {
 		http.Error(res, err.Error(), http.StatusBadRequest)
 		return
@@ -96,7 +98,6 @@ func (h JSONMetricHandler) Get(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusOK)
 	res.Write(metricJSON)
 }

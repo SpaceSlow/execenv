@@ -97,29 +97,34 @@ func (s DBStorage) Batch(metricSlice []metrics.Metric) ([]metrics.Metric, error)
 }
 
 func (s DBStorage) Get(metricType metrics.MetricType, name string) (*metrics.Metric, bool) {
-	var (
-		row   *sql.Row
-		value interface{}
-	)
-
 	switch metricType {
 	case metrics.Gauge:
-		row = s.db.QueryRowContext(s.ctx, "SELECT value FROM metrics WHERE (name = $1 AND is_gauge=TRUE) LIMIT 1;", name)
+		var value float64
+		row := s.db.QueryRowContext(s.ctx, "SELECT value FROM metrics WHERE (name = $1 AND is_gauge=TRUE) LIMIT 1;", name)
+		if err := row.Scan(&value); err != nil {
+			return nil, false
+		}
+
+		return &metrics.Metric{
+			Type:  metricType,
+			Name:  name,
+			Value: value,
+		}, true
 	case metrics.Counter:
-		row = s.db.QueryRowContext(s.ctx, "SELECT delta FROM metrics WHERE (name = $1 AND is_gauge=FALSE) LIMIT 1;", name)
+		var delta int64
+		row := s.db.QueryRowContext(s.ctx, "SELECT delta FROM metrics WHERE (name = $1 AND is_gauge=FALSE) LIMIT 1;", name)
+		if err := row.Scan(&delta); err != nil {
+			return nil, false
+		}
+
+		return &metrics.Metric{
+			Type:  metricType,
+			Name:  name,
+			Value: delta,
+		}, true
 	default:
 		return nil, false
 	}
-
-	if err := row.Scan(&value); err != nil {
-		return nil, false
-	}
-
-	return &metrics.Metric{
-		Type:  metricType,
-		Name:  name,
-		Value: value,
-	}, true
 }
 
 func (s DBStorage) List() []metrics.Metric {
