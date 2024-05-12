@@ -16,7 +16,7 @@ func ParseMetricType(mType string) (MetricType, error) {
 	case "gauge":
 		return Gauge, nil
 	default:
-		return MetricType(-1), &IncorrectMetricTypeOrValueError{}
+		return MetricType(-1), ErrIncorrectMetricTypeOrValue
 	}
 }
 

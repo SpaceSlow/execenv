@@ -26,7 +26,7 @@ func (storage *MemStorage) Add(metric *metrics.Metric) (*metrics.Metric, error) 
 		prevValue := storage.counters[metric.Name]
 		value, ok := metric.Value.(int64)
 		if !ok {
-			return nil, &metrics.IncorrectMetricTypeOrValueError{}
+			return nil, metrics.ErrIncorrectMetricTypeOrValue
 		}
 		updValue := prevValue + value
 		updMetric = metric.Copy()
@@ -35,12 +35,12 @@ func (storage *MemStorage) Add(metric *metrics.Metric) (*metrics.Metric, error) 
 	case metrics.Gauge:
 		value, ok := metric.Value.(float64)
 		if !ok {
-			return nil, &metrics.IncorrectMetricTypeOrValueError{}
+			return nil, metrics.ErrIncorrectMetricTypeOrValue
 		}
 		updMetric = metric.Copy()
 		storage.gauges[metric.Name] = value
 	default:
-		return nil, &metrics.IncorrectMetricTypeOrValueError{}
+		return nil, metrics.ErrIncorrectMetricTypeOrValue
 	}
 	return updMetric, nil
 }

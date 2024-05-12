@@ -12,6 +12,8 @@ import (
 	"github.com/SpaceSlow/execenv/cmd/metrics"
 )
 
+var ErrNoSpecifyFile = errors.New("no file specified")
+
 type MemFileStorage struct {
 	*MemStorage
 	f           *os.File
@@ -46,7 +48,7 @@ func (s *MemFileStorage) Close() error {
 
 func (s *MemFileStorage) SaveMetricsToFile() error {
 	if s.f == nil {
-		return errors.New("no file specified")
+		return ErrNoSpecifyFile
 	}
 	logger.Log.Info("saving metrics...")
 
@@ -63,7 +65,7 @@ func (s *MemFileStorage) SaveMetricsToFile() error {
 
 func (s *MemFileStorage) LoadMetricsFromFile() error {
 	if s.f == nil {
-		return errors.New("no file specified")
+		return ErrNoSpecifyFile
 	}
 
 	s.mu.Lock()

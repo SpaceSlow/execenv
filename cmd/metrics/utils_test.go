@@ -97,7 +97,7 @@ func TestSendMetrics(t *testing.T) {
 			}))
 			defer testServer.Close()
 
-			SendMetrics(testServer.URL+"/update/", test.metrics)
+			require.NoError(t, SendMetrics(testServer.URL+"/update/", test.metrics))
 
 			assert.ElementsMatch(t, receivedMetrics, test.wantResponseBody)
 		})

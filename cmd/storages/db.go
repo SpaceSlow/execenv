@@ -4,14 +4,68 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 
 	"github.com/SpaceSlow/execenv/cmd/metrics"
+	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
+type RetryDB struct {
+	*sql.DB
+}
+
+func (db *RetryDB) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
+	row := db.DB.QueryRowContext(ctx, query, args...)
+	var pgConErr *pgconn.ConnectError
+	if row.Err() == nil || !errors.As(row.Err(), &pgConErr) {
+		return row
+	}
+
+	delays := []time.Duration{
+		time.Second,
+		3 * time.Second,
+		5 * time.Second,
+	}
+	for attempt := 0; attempt < len(delays); attempt++ {
+		time.Sleep(delays[attempt])
+		row = db.DB.QueryRowContext(ctx, query, args...)
+		if row.Err() != nil && errors.As(row.Err(), &pgConErr) {
+			attempt++
+		} else {
+			return row
+		}
+	}
+	return row
+}
+
+func (db *RetryDB) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	res, err := db.DB.ExecContext(ctx, query, args...)
+	var pgConErr *pgconn.ConnectError
+	if err == nil || !errors.As(err, &pgConErr) {
+		return res, err
+	}
+
+	delays := []time.Duration{
+		time.Second,
+		3 * time.Second,
+		5 * time.Second,
+	}
+	for attempt := 0; attempt < len(delays); attempt++ {
+		time.Sleep(delays[attempt])
+		res, err = db.DB.ExecContext(ctx, query, args...)
+		if err != nil && errors.As(err, &pgConErr) {
+			attempt++
+		} else {
+			return res, err
+		}
+	}
+	return res, err
+}
+
 type DBStorage struct {
 	ctx context.Context
-	db  *sql.DB
+	db  RetryDB
 }
 
 func (s DBStorage) Add(metric *metrics.Metric) (*metrics.Metric, error) {
@@ -42,9 +96,9 @@ func (s DBStorage) Add(metric *metrics.Metric) (*metrics.Metric, error) {
 			return nil, err
 		}
 	default:
-		err = &metrics.IncorrectMetricTypeOrValueError{}
+		err = metrics.ErrIncorrectMetricTypeOrValue
 	}
-	return updMetric, nil
+	return updMetric, err
 }
 
 func (s DBStorage) Batch(metricSlice []metrics.Metric) ([]metrics.Metric, error) {
@@ -82,7 +136,7 @@ func (s DBStorage) Batch(metricSlice []metrics.Metric) ([]metrics.Metric, error)
 				return nil, err
 			}
 		default:
-			err = &metrics.IncorrectMetricTypeOrValueError{}
+			err = metrics.ErrIncorrectMetricTypeOrValue
 		}
 		if err != nil {
 			tx.Rollback()
@@ -100,7 +154,7 @@ func (s DBStorage) Get(metricType metrics.MetricType, name string) (*metrics.Met
 	switch metricType {
 	case metrics.Gauge:
 		var value float64
-		row := s.db.QueryRowContext(s.ctx, "SELECT value FROM metrics WHERE (name = $1 AND is_gauge=TRUE) LIMIT 1;", name)
+		row := s.db.QueryRowContext(s.ctx, "SELECT value FROM metrics WHERE (name=$1 AND is_gauge=TRUE) LIMIT 1;", name)
 		if err := row.Scan(&value); err != nil {
 			return nil, false
 		}
@@ -112,7 +166,7 @@ func (s DBStorage) Get(metricType metrics.MetricType, name string) (*metrics.Met
 		}, true
 	case metrics.Counter:
 		var delta int64
-		row := s.db.QueryRowContext(s.ctx, "SELECT delta FROM metrics WHERE (name = $1 AND is_gauge=FALSE) LIMIT 1;", name)
+		row := s.db.QueryRowContext(s.ctx, "SELECT delta FROM metrics WHERE (name=$1 AND is_gauge=FALSE) LIMIT 1;", name)
 		if err := row.Scan(&delta); err != nil {
 			return nil, false
 		}
@@ -182,25 +236,26 @@ func NewDBStorage(ctx context.Context, dsn string) (*DBStorage, error) {
 	if err != nil {
 		return nil, err
 	}
+	rdb := RetryDB{db}
 
-	ok, err := checkExistMetricTable(ctx, db)
+	ok, err := checkExistMetricTable(ctx, rdb)
 	if err != nil {
 		return nil, err
 	}
 
 	if !ok {
-		if err := createMetricsTable(ctx, db); err != nil {
+		if err := createMetricsTable(ctx, rdb); err != nil {
 			return nil, err
 		}
 	}
 
 	return &DBStorage{
 		ctx: ctx,
-		db:  db,
+		db:  rdb,
 	}, nil
 }
 
-func checkExistMetricTable(ctx context.Context, db *sql.DB) (bool, error) {
+func checkExistMetricTable(ctx context.Context, db RetryDB) (bool, error) {
 	row := db.QueryRowContext(ctx, "SELECT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename  = 'metrics');")
 
 	var tableExist bool
@@ -210,7 +265,7 @@ func checkExistMetricTable(ctx context.Context, db *sql.DB) (bool, error) {
 	return tableExist, nil
 }
 
-func createMetricsTable(ctx context.Context, db *sql.DB) error {
+func createMetricsTable(ctx context.Context, db RetryDB) error {
 	_, err := db.ExecContext(ctx, `
 		CREATE TABLE metrics (
 			id 			SERIAL PRIMARY KEY,

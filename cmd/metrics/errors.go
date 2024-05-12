@@ -1,13 +1,8 @@
 package metrics
 
-type IncorrectMetricTypeOrValueError struct{}
+import "errors"
 
-func (e *IncorrectMetricTypeOrValueError) Error() string {
-	return "incorrect metric type or value"
-}
-
-type EmptyMetricNameError struct{}
-
-func (e *EmptyMetricNameError) Error() string {
-	return "empty metric name"
-}
+var (
+	ErrIncorrectMetricTypeOrValue = errors.New("incorrect metric type or value")
+	ErrEmptyMetricName            = errors.New("empty metric name")
+)
