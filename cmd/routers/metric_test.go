@@ -41,26 +41,6 @@ func newMemStorageWithMetrics(metrics []metrics.Metric) *storages.MemStorage {
 	return storage
 }
 
-func requireEqualExistingMetricsWithResponse(t *testing.T, test testCase, res *http.Response) {
-	body, err := io.ReadAll(res.Body)
-	require.NoError(t, res.Body.Close())
-	require.NoError(t, err)
-	lines := strings.FieldsFunc(string(body), func(r rune) bool {
-		return r == '\n'
-	})
-
-	metricStrings := make([]string, 0, len(lines))
-	for _, metric := range test.fields.storage.List() {
-		metricStrings = append(metricStrings, metric.String())
-	}
-
-	require.ElementsMatch(t, metricStrings, lines)
-}
-
-func getAddress[T int64 | float64](v T) *T {
-	return &v
-}
-
 func TestMetricRouter(t *testing.T) {
 	tests := []testCase{
 		{
