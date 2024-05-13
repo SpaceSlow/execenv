@@ -359,6 +359,7 @@ func TestMetricRouter(t *testing.T) {
 
 			if test.want.body != "" {
 				body, err := io.ReadAll(res.Body)
+				require.NoError(t, res.Body.Close())
 				require.NoError(t, err)
 				assert.Equal(t, test.want.body, string(body))
 			}

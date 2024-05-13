@@ -1,7 +1,6 @@
 package storages
 
 import (
-	"sync"
 	"testing"
 
 	"github.com/SpaceSlow/execenv/cmd/metrics"
@@ -166,7 +165,6 @@ func TestMemStorage_Add(t *testing.T) {
 
 func TestMemStorage_Get(t *testing.T) {
 	type fields struct {
-		mu       sync.Mutex
 		counters map[string]int64
 		gauges   map[string]float64
 	}
