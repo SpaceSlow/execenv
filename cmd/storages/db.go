@@ -271,7 +271,7 @@ func createMetricsTable(ctx context.Context, db RetryDB) error {
 			id 			SERIAL PRIMARY KEY,
 			name 		VARCHAR(30) UNIQUE NOT NULL,
 			is_gauge 	BOOLEAN NOT NULL,
-			delta 		INTEGER,
+			delta 		BIGINT,
 			value		DOUBLE PRECISION
 		);
 		`)
