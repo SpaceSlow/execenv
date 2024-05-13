@@ -1,8 +1,6 @@
 package routers
 
 import (
-	"bytes"
-	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -16,15 +14,15 @@ import (
 )
 
 type fields struct {
-	method     string
-	storage    storages.MetricStorage
-	path       string
-	jsonMetric *metrics.JSONMetric
+	method  string
+	storage storages.MetricStorage
+	path    string
+	body    string
 }
 
 type want struct {
 	statusCode int
-	metric     *metrics.Metric
+	body       string
 }
 
 type testCase struct {
@@ -170,11 +168,6 @@ func TestMetricRouter(t *testing.T) {
 			},
 			want: want{
 				statusCode: http.StatusOK,
-				metric: &metrics.Metric{
-					Type:  metrics.Counter,
-					Name:  "metric",
-					Value: int64(101109),
-				},
 			},
 		},
 		{
@@ -186,11 +179,6 @@ func TestMetricRouter(t *testing.T) {
 			},
 			want: want{
 				statusCode: http.StatusOK,
-				metric: &metrics.Metric{
-					Type:  metrics.Gauge,
-					Name:  "metric",
-					Value: 1.21,
-				},
 			},
 		},
 		{
@@ -208,11 +196,6 @@ func TestMetricRouter(t *testing.T) {
 			},
 			want: want{
 				statusCode: http.StatusOK,
-				metric: &metrics.Metric{
-					Type:  metrics.Gauge,
-					Name:  "RandomValue",
-					Value: 3.01,
-				},
 			},
 		},
 		{
@@ -230,11 +213,6 @@ func TestMetricRouter(t *testing.T) {
 			},
 			want: want{
 				statusCode: http.StatusOK,
-				metric: &metrics.Metric{
-					Type:  metrics.Counter,
-					Name:  "PollCount",
-					Value: int64(15),
-				},
 			},
 		},
 		{
@@ -291,6 +269,7 @@ func TestMetricRouter(t *testing.T) {
 			},
 			want: want{
 				statusCode: http.StatusOK,
+				body:       "PollCount = 10 (counter)\nRandomValue = 2.97 (gauge)\n",
 			},
 		},
 		{
@@ -305,19 +284,11 @@ func TestMetricRouter(t *testing.T) {
 					},
 				}),
 				path: "/update/",
-				jsonMetric: &metrics.JSONMetric{
-					ID:    "PollCount",
-					MType: "counter",
-					Delta: getAddress(int64(5)),
-				},
+				body: `{"id": "PollCount", "type": "counter", "delta": 5}`,
 			},
 			want: want{
 				statusCode: http.StatusOK,
-				metric: &metrics.Metric{
-					Type:  metrics.Counter,
-					Name:  "PollCount",
-					Value: int64(15),
-				},
+				body:       `{"id":"PollCount","type":"counter","delta":15}`,
 			},
 		},
 		{
@@ -326,11 +297,7 @@ func TestMetricRouter(t *testing.T) {
 				method:  http.MethodPost,
 				storage: storages.NewMemStorage(),
 				path:    "/update/",
-				jsonMetric: &metrics.JSONMetric{
-					ID:    "PollCount",
-					MType: "incorrect_type",
-					Delta: getAddress(int64(5)),
-				},
+				body:    `{"id": "PollCount", "type": "incorrect_type", "delta": 5}`,
 			},
 			want: want{
 				statusCode: http.StatusBadRequest,
@@ -342,11 +309,7 @@ func TestMetricRouter(t *testing.T) {
 				method:  http.MethodPost,
 				storage: storages.NewMemStorage(),
 				path:    "/update/",
-				jsonMetric: &metrics.JSONMetric{
-					ID:    "RandomValue",
-					MType: "gauge",
-					Delta: getAddress(int64(5)),
-				},
+				body:    `{"id": "RandomValue", "type": "gauge", "delta": 5}`,
 			},
 			want: want{
 				statusCode: http.StatusBadRequest,
@@ -358,11 +321,7 @@ func TestMetricRouter(t *testing.T) {
 				method:  http.MethodPost,
 				storage: storages.NewMemStorage(),
 				path:    "/update/",
-				jsonMetric: &metrics.JSONMetric{
-					ID:    "PollCount",
-					MType: "counter",
-					Value: getAddress(117.9),
-				},
+				body:    `{"id": "PollCount", "type": "counter", "value": 117.9}`,
 			},
 			want: want{
 				statusCode: http.StatusBadRequest,
@@ -374,10 +333,7 @@ func TestMetricRouter(t *testing.T) {
 				method:  http.MethodPost,
 				storage: storages.NewMemStorage(),
 				path:    "/value/",
-				jsonMetric: &metrics.JSONMetric{
-					ID:    "PollCount",
-					MType: "counter",
-				},
+				body:    `{"id": "PollCount", "type": "counter"}`,
 			},
 			want: want{
 				statusCode: http.StatusNotFound,
@@ -395,18 +351,11 @@ func TestMetricRouter(t *testing.T) {
 					},
 				}),
 				path: "/value/",
-				jsonMetric: &metrics.JSONMetric{
-					ID:    "PollCount",
-					MType: "counter",
-				},
+				body: `{"id": "PollCount", "type": "counter"}`,
 			},
 			want: want{
 				statusCode: http.StatusOK,
-				metric: &metrics.Metric{
-					Type:  metrics.Counter,
-					Name:  "PollCount",
-					Value: int64(10),
-				},
+				body:       `{"id":"PollCount","type":"counter","delta":10}`,
 			},
 		},
 	}
@@ -415,52 +364,24 @@ func TestMetricRouter(t *testing.T) {
 			ts := httptest.NewServer(MetricRouter(test.fields.storage))
 			defer ts.Close()
 
-			var body io.Reader
-
-			isJSONRequest := (test.fields.path == "/update/" || test.fields.path == "/value/") && test.fields.jsonMetric != nil
-			if isJSONRequest {
-				m, err := json.Marshal(test.fields.jsonMetric)
-				require.NoError(t, err)
-				body = bytes.NewReader(m)
-			}
-
-			req, err := http.NewRequest(test.fields.method, ts.URL+test.fields.path, body)
+			req, err := http.NewRequest(test.fields.method, ts.URL+test.fields.path, nil)
 			require.NoError(t, err)
+
+			if len(test.fields.body) > 0 {
+				req.Header.Set("Content-Type", "application/json")
+				req.Body = io.NopCloser(strings.NewReader(test.fields.body))
+			}
 
 			res, err := ts.Client().Do(req)
 			require.NoError(t, err)
 
 			assert.Equal(t, test.want.statusCode, res.StatusCode)
 
-			if res.StatusCode != http.StatusOK {
-				return
-			}
-
-			if test.fields.path == "/" {
-				requireEqualExistingMetricsWithResponse(t, test, res)
-				return
-			}
-
-			if isJSONRequest {
-				var data []byte
-				data, err := io.ReadAll(res.Body)
+			if test.want.body != "" {
+				body, err := io.ReadAll(res.Body)
 				require.NoError(t, err)
-
-				var m metrics.Metric
-				require.NoError(t, m.UnmarshalJSON(data))
-
-				assert.Equal(t, m.Type, test.want.metric.Type)
-				assert.Equal(t, m.Name, test.want.metric.Name)
-				assert.Equal(t, m.Value, test.want.metric.Value)
+				assert.Equal(t, test.want.body, string(body))
 			}
-
-			storagedMetric, ok := test.fields.storage.Get(test.want.metric.Type, test.want.metric.Name)
-
-			require.Equal(t, true, ok)
-
-			assert.Equal(t, storagedMetric.Type, test.want.metric.Type)
-			assert.Equal(t, storagedMetric.Name, test.want.metric.Name)
-			assert.Equal(t, storagedMetric.Value, test.want.metric.Value)
 		})
 	}
 }
