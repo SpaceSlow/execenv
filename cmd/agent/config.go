@@ -9,6 +9,7 @@ type Config struct {
 	ServerAddr     flags.NetAddress `env:"ADDRESS"`
 	ReportInterval int              `env:"REPORT_INTERVAL"`
 	PollInterval   int              `env:"POLL_INTERVAL"`
+	Key            string           `env:"KEY"`
 }
 
 func GetConfigWithFlags() (*Config, error) {
@@ -27,6 +28,9 @@ func GetConfigWithFlags() (*Config, error) {
 	}
 	if cfg.ServerAddr.String() == "" {
 		cfg.ServerAddr = flagServerAddr
+	}
+	if cfg.Key == "" {
+		cfg.Key = flagKey
 	}
 
 	return cfg, nil

@@ -20,7 +20,7 @@ func ParseMetricType(mType string) (MetricType, error) {
 	}
 }
 
-func SendMetrics(url string, metrics []Metric) error {
+func SendMetrics(url string, key string, metrics []Metric) error {
 	jsonMetric, err := json.Marshal(metrics)
 	if err != nil {
 		return err
@@ -31,11 +31,23 @@ func SendMetrics(url string, metrics []Metric) error {
 		return err
 	}
 
+	req, err = addSignHeader(req, key)
+	if err != nil {
+		return err
+	}
+
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
 	return res.Body.Close()
+}
+
+func addSignHeader(req *http.Request, key string) (*http.Request, error) {
+	// TODO реализовать добавление подписи
+	req.Header.Set("HashSHA256", "")
+
+	return req, nil
 }
 
 func newCompressedRequest(method, url string, data []byte) (*http.Request, error) {
