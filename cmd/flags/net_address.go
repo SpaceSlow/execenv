@@ -5,6 +5,11 @@ import (
 	"strings"
 )
 
+const (
+	MinPortNumber = 0
+	MaxPortNumber = 65535
+)
+
 type NetAddress struct {
 	Host string
 	Port int
@@ -24,11 +29,11 @@ func (a NetAddress) String() string {
 func (a *NetAddress) Set(s string) error {
 	hp := strings.Split(s, ":")
 	if len(hp) != 2 {
-		return &IncorrectNetAddressError{}
+		return ErrIncorrectNetAddress
 	}
 	port, err := strconv.Atoi(hp[1])
-	if err != nil {
-		return err
+	if err != nil || port < MinPortNumber || port > MaxPortNumber {
+		return ErrIncorrectPort
 	}
 	a.Host = hp[0]
 	a.Port = port

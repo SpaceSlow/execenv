@@ -3,6 +3,7 @@ package metrics
 import (
 	"bytes"
 	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"runtime"
@@ -15,14 +16,26 @@ func ParseMetricType(mType string) (MetricType, error) {
 	case "gauge":
 		return Gauge, nil
 	default:
-		return MetricType(-1), &IncorrectMetricTypeOrValueError{}
+		return MetricType(-1), ErrIncorrectMetricTypeOrValue
 	}
 }
 
-func SendMetrics(url string, metrics []Metric) {
-	for _, metric := range metrics {
-		_ = SendMetric(url, metric)
+func SendMetrics(url string, metrics []Metric) error {
+	jsonMetric, err := json.Marshal(metrics)
+	if err != nil {
+		return err
 	}
+
+	req, err := newCompressedRequest(http.MethodPost, url, jsonMetric)
+	if err != nil {
+		return err
+	}
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	return res.Body.Close()
 }
 
 func newCompressedRequest(method, url string, data []byte) (*http.Request, error) {
@@ -47,24 +60,6 @@ func newCompressedRequest(method, url string, data []byte) (*http.Request, error
 	req.Header.Set("Content-Type", "application/json")
 
 	return req, nil
-}
-
-func SendMetric(url string, metric Metric) error {
-	jsonMetric, err := metric.MarshalJSON()
-	if err != nil {
-		return err
-	}
-
-	req, err := newCompressedRequest(http.MethodPost, url, jsonMetric)
-	if err != nil {
-		return err
-	}
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	return res.Body.Close()
 }
 
 func GetRuntimeMetrics() []Metric {

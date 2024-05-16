@@ -12,18 +12,31 @@ import (
 	"github.com/SpaceSlow/execenv/cmd/metrics"
 )
 
+var ErrNoSpecifyFile = errors.New("no file specified")
+
 type MemFileStorage struct {
 	*MemStorage
 	f           *os.File
 	isSyncStore bool
 }
 
-func (s *MemFileStorage) Add(metric *metrics.Metric) error {
-	err := s.MemStorage.Add(metric)
-	if err != nil || !s.isSyncStore {
-		return err
+func (s *MemFileStorage) Add(metric *metrics.Metric) (*metrics.Metric, error) {
+	updMetric, err := s.MemStorage.Add(metric)
+	if err != nil {
+		return nil, err
 	}
-	return s.SaveMetricsToFile()
+	if !s.isSyncStore {
+		return updMetric, nil
+	}
+	return updMetric, s.SaveMetricsToFile()
+}
+
+func (s *MemFileStorage) Batch(metricSlice []metrics.Metric) ([]metrics.Metric, error) {
+	updMetrics, err := s.MemStorage.Batch(metricSlice)
+	if err != nil || !s.isSyncStore {
+		return updMetrics, err
+	}
+	return updMetrics, s.SaveMetricsToFile()
 }
 
 func (s *MemFileStorage) Close() error {
@@ -35,7 +48,7 @@ func (s *MemFileStorage) Close() error {
 
 func (s *MemFileStorage) SaveMetricsToFile() error {
 	if s.f == nil {
-		return errors.New("no file specified")
+		return ErrNoSpecifyFile
 	}
 	logger.Log.Info("saving metrics...")
 
@@ -52,7 +65,7 @@ func (s *MemFileStorage) SaveMetricsToFile() error {
 
 func (s *MemFileStorage) LoadMetricsFromFile() error {
 	if s.f == nil {
-		return errors.New("no file specified")
+		return ErrNoSpecifyFile
 	}
 
 	s.mu.Lock()
@@ -68,7 +81,7 @@ func (s *MemFileStorage) LoadMetricsFromFile() error {
 	}
 
 	for _, metric := range metricSlice {
-		if err = s.MemStorage.Add(&metric); err != nil {
+		if _, err = s.MemStorage.Add(&metric); err != nil {
 			return err
 		}
 	}

@@ -16,7 +16,7 @@ type MetricHandler struct {
 
 func (h MetricHandler) Post(res http.ResponseWriter, req *http.Request) {
 	mType, err := metrics.ParseMetricType(chi.URLParam(req, "type"))
-	if errors.Is(err, &metrics.IncorrectMetricTypeOrValueError{}) {
+	if errors.Is(err, metrics.ErrIncorrectMetricTypeOrValue) {
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -24,10 +24,10 @@ func (h MetricHandler) Post(res http.ResponseWriter, req *http.Request) {
 	name := chi.URLParam(req, "name")
 	value := chi.URLParam(req, "value")
 	metric, err := metrics.NewMetric(mType, name, value)
-	if errors.Is(err, &metrics.IncorrectMetricTypeOrValueError{}) {
+	if errors.Is(err, metrics.ErrIncorrectMetricTypeOrValue) {
 		res.WriteHeader(http.StatusBadRequest)
 		return
-	} else if errors.Is(err, &metrics.EmptyMetricNameError{}) {
+	} else if errors.Is(err, metrics.ErrEmptyMetricName) {
 		res.WriteHeader(http.StatusNotFound)
 		return
 	} else if err != nil {
@@ -35,7 +35,7 @@ func (h MetricHandler) Post(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := h.MetricStorage.Add(metric); err != nil {
+	if _, err := h.MetricStorage.Add(metric); err != nil {
 		http.Error(res, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -45,7 +45,7 @@ func (h MetricHandler) Post(res http.ResponseWriter, req *http.Request) {
 
 func (h MetricHandler) Get(res http.ResponseWriter, req *http.Request) {
 	mType, err := metrics.ParseMetricType(chi.URLParam(req, "type"))
-	if errors.Is(err, &metrics.IncorrectMetricTypeOrValueError{}) {
+	if errors.Is(err, metrics.ErrIncorrectMetricTypeOrValue) {
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}

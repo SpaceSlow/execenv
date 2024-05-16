@@ -29,17 +29,17 @@ func (m *Metric) MarshalJSON() ([]byte, error) {
 	case Counter:
 		delta, ok := m.Value.(int64)
 		if !ok {
-			return nil, &IncorrectMetricTypeOrValueError{}
+			return nil, ErrIncorrectMetricTypeOrValue
 		}
 		metric.Delta = &delta
 	case Gauge:
 		value, ok := m.Value.(float64)
 		if !ok {
-			return nil, &IncorrectMetricTypeOrValueError{}
+			return nil, ErrIncorrectMetricTypeOrValue
 		}
 		metric.Value = &value
 	default:
-		return nil, &IncorrectMetricTypeOrValueError{}
+		return nil, ErrIncorrectMetricTypeOrValue
 	}
 
 	return json.Marshal(metric)
@@ -48,7 +48,7 @@ func (m *Metric) MarshalJSON() ([]byte, error) {
 func (m *Metric) UnmarshalJSON(data []byte) error {
 	var metric JSONMetric
 	if json.Unmarshal(data, &metric) != nil {
-		return &IncorrectMetricTypeOrValueError{}
+		return ErrIncorrectMetricTypeOrValue
 	}
 
 	var mType MetricType
@@ -70,7 +70,7 @@ func (m *Metric) UnmarshalJSON(data []byte) error {
 		}
 	}
 	if m.Value == nil {
-		return &IncorrectMetricTypeOrValueError{}
+		return ErrIncorrectMetricTypeOrValue
 	}
 	return nil
 }
@@ -90,6 +90,11 @@ func (m *Metric) ValueAsString() string {
 	}
 }
 
+func (m *Metric) Copy() *Metric {
+	metric, _ := NewMetric(m.Type, m.Name, m.ValueAsString())
+	return metric
+}
+
 func NewMetric(metricType MetricType, name, value string) (*Metric, error) {
 	var err error
 	var val interface{}
@@ -101,7 +106,7 @@ func NewMetric(metricType MetricType, name, value string) (*Metric, error) {
 	}
 
 	if err != nil {
-		return nil, &IncorrectMetricTypeOrValueError{}
+		return nil, ErrIncorrectMetricTypeOrValue
 	}
 
 	return &Metric{metricType, name, val}, nil
