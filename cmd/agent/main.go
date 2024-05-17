@@ -43,16 +43,16 @@ func main() {
 				},
 			)
 		case <-reportTick:
-			err := metrics.SendMetrics(url, metricSlice)
+			err := metrics.SendMetrics(url, cfg.Key, metricSlice)
 			if err != nil {
-				go retrySendMetrics(url, metricSlice)
+				go retrySendMetrics(url, cfg.Key, metricSlice)
 			}
 			pollCount = 0
 		}
 	}
 }
 
-func retrySendMetrics(url string, metricSlice []metrics.Metric) error {
+func retrySendMetrics(url, key string, metricSlice []metrics.Metric) error {
 	var err error
 	delays := []time.Duration{
 		time.Second,
@@ -61,7 +61,7 @@ func retrySendMetrics(url string, metricSlice []metrics.Metric) error {
 	}
 	for attempt := 0; attempt < len(delays); attempt++ {
 		time.Sleep(delays[attempt])
-		err = metrics.SendMetrics(url, metricSlice)
+		err = metrics.SendMetrics(url, key, metricSlice)
 		if err != nil {
 			attempt++
 		} else {

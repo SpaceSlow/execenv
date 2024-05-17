@@ -3,8 +3,11 @@ package metrics
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"runtime"
 )
@@ -20,7 +23,7 @@ func ParseMetricType(mType string) (MetricType, error) {
 	}
 }
 
-func SendMetrics(url string, key string, metrics []Metric) error {
+func SendMetrics(url, key string, metrics []Metric) error {
 	jsonMetric, err := json.Marshal(metrics)
 	if err != nil {
 		return err
@@ -44,8 +47,20 @@ func SendMetrics(url string, key string, metrics []Metric) error {
 }
 
 func addSignHeader(req *http.Request, key string) (*http.Request, error) {
-	// TODO реализовать добавление подписи
-	req.Header.Set("HashSHA256", "")
+	if key == "" {
+		return req, nil
+	}
+
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		return nil, err
+	}
+	rb := bytes.NewReader(body)
+	req.Body = io.NopCloser(rb)
+	h := sha256.New()
+	h.Write(body)
+
+	req.Header.Set("HashSHA256", hex.EncodeToString(h.Sum([]byte(key))))
 
 	return req, nil
 }
