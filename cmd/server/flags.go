@@ -12,6 +12,7 @@ var (
 	flagStoragePath   string
 	flagNeedRestore   bool
 	flagDatabaseDSN   string
+	flagKey           string
 )
 
 func parseFlags() {
@@ -21,6 +22,7 @@ func parseFlags() {
 	flag.StringVar(&flagStoragePath, "f", "/tmp/metrics-db.json", "file storage path (default /tmp/metrics-db.json")
 	flag.BoolVar(&flagNeedRestore, "r", true, "needed loading saved metrics from file (default true)")
 	flag.StringVar(&flagDatabaseDSN, "d", "", "PostgreSQL (ver. >=10) database DSN (example: postgres://username:password@localhost:5432/database_name")
+	flag.StringVar(&flagKey, "k", "", "key for signing queries")
 
 	flag.Parse()
 }
