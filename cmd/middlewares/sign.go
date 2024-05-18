@@ -2,36 +2,27 @@ package middlewares
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"io"
 	"net/http"
 	"net/http/httptest"
+
+	"github.com/SpaceSlow/execenv/cmd/metrics"
 )
+
+const HashHeaderField = "Hash"
 
 var KEY string
 
-func getHashBody(req *http.Request, key string) (string, error) {
-	body, err := io.ReadAll(req.Body)
-	if err != nil {
-		return "", err
-	}
-	rb := bytes.NewReader(body)
-	req.Body = io.NopCloser(rb)
-	h := sha256.New()
-	h.Write(body)
-
-	return hex.EncodeToString(h.Sum([]byte(key))), nil
-}
-
 func WithSigning(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if headerHash := r.Header.Get("Hash"); headerHash != "" && headerHash != "none" && KEY != "" {
-			hashSum, err := getHashBody(r, KEY)
+		if headerHash := r.Header.Get(HashHeaderField); headerHash != "" && headerHash != "none" && KEY != "" {
+			body, err := io.ReadAll(r.Body)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
+			r.Body = io.NopCloser(bytes.NewBuffer(body))
+			hashSum := metrics.GetHash(body, KEY)
 			if hashSum != headerHash {
 				w.WriteHeader(http.StatusBadRequest)
 				return
@@ -46,19 +37,20 @@ func WithSigning(next http.Handler) http.Handler {
 		l := httptest.NewRecorder()
 		next.ServeHTTP(l, r)
 
-		h := sha256.New()
 		body, err := io.ReadAll(l.Body)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		h.Write(body)
+		r.Body = io.NopCloser(bytes.NewBuffer(body))
+		hash := metrics.GetHash(body, KEY)
+
 		for key, values := range l.Header() {
 			for _, value := range values {
 				w.Header().Add(key, value)
 			}
 		}
-		w.Header().Set("Hash", hex.EncodeToString(h.Sum([]byte(KEY))))
+		w.Header().Set(HashHeaderField, hash)
 		w.WriteHeader(l.Code)
 		w.Write(body)
 	})

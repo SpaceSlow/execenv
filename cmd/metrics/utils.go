@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"runtime"
 )
@@ -22,17 +23,16 @@ func ParseMetricType(mType string) (MetricType, error) {
 	}
 }
 
+func GetHash(data []byte, key string) string {
+	h := sha256.New()
+	h.Write(data)
+	return hex.EncodeToString(h.Sum([]byte(key)))
+}
+
 func SendMetrics(url, key string, metrics []Metric) error {
 	jsonMetric, err := json.Marshal(metrics)
 	if err != nil {
 		return err
-	}
-
-	var hash string
-	if key != "" {
-		h := sha256.New()
-		h.Write(jsonMetric)
-		hash = hex.EncodeToString(h.Sum([]byte(key)))
 	}
 
 	req, err := newCompressedRequest(http.MethodPost, url, jsonMetric)
@@ -40,8 +40,13 @@ func SendMetrics(url, key string, metrics []Metric) error {
 		return err
 	}
 
-	if hash != "" {
-		req.Header.Set("Hash", hash)
+	if key != "" {
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			return err
+		}
+		req.Body = io.NopCloser(bytes.NewBuffer(body))
+		req.Header.Set("Hash", GetHash(body, key))
 	}
 
 	res, err := http.DefaultClient.Do(req)
