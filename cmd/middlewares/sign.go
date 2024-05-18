@@ -26,7 +26,7 @@ func getHashBody(req *http.Request, key string) (string, error) {
 
 func WithSigning(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if headerHash := r.Header.Get("Hash"); headerHash != "" && KEY != "" {
+		if headerHash := r.Header.Get("Hash"); headerHash != "" && headerHash != "none" && KEY != "" {
 			hashSum, err := getHashBody(r, KEY)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
