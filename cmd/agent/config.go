@@ -11,6 +11,7 @@ type Config struct {
 	ReportInterval int              `env:"REPORT_INTERVAL"`
 	PollInterval   int              `env:"POLL_INTERVAL"`
 	Key            string           `env:"KEY"`
+	RateLimit      int              `env:"RATE_LIMIT"`
 	Delays         []time.Duration
 }
 
@@ -39,6 +40,10 @@ func GetConfigWithFlags() (*Config, error) {
 		time.Second,
 		3 * time.Second,
 		5 * time.Second,
+	}
+
+	if cfg.RateLimit == 0 {
+		cfg.RateLimit = flagRateLimit
 	}
 
 	return cfg, nil
