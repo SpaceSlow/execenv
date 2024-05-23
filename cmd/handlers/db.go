@@ -11,13 +11,11 @@ type DBHandler struct {
 }
 
 func (h DBHandler) Ping(res http.ResponseWriter, _ *http.Request) {
-	switch h.MetricStorage.(type) {
-	case *storages.DBStorage:
-		storage := h.MetricStorage.(*storages.DBStorage)
-		if storage.CheckConnection() {
-			res.WriteHeader(http.StatusOK)
-			return
-		}
+	dbStorage, ok := h.MetricStorage.(*storages.DBStorage)
+	if ok && dbStorage.CheckConnection() {
+		res.WriteHeader(http.StatusOK)
+		return
 	}
 	res.WriteHeader(http.StatusInternalServerError)
+	return
 }

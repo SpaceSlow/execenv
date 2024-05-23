@@ -7,6 +7,8 @@ import (
 	"github.com/SpaceSlow/execenv/cmd/metrics"
 )
 
+var pollCount int64
+
 func main() {
 	cfg, err := GetConfigWithFlags()
 
@@ -22,7 +24,7 @@ func main() {
 
 	pollTick := time.Tick(pollInterval)
 	reportTick := time.Tick(reportInterval)
-	var pollCount int64
+	//metricsCh := make(chan []metrics.Metric) TODO: goroutines for get metrics and send metrics
 
 	for {
 		select {
@@ -45,28 +47,21 @@ func main() {
 		case <-reportTick:
 			err := metrics.SendMetrics(url, cfg.Key, metricSlice)
 			if err != nil {
-				go retrySendMetrics(url, cfg.Key, metricSlice)
+				go retrySendMetrics(cfg, url, metricSlice)
 			}
 			pollCount = 0
 		}
 	}
 }
 
-func retrySendMetrics(url, key string, metricSlice []metrics.Metric) error {
+func retrySendMetrics(cfg *Config, url string, metricSlice []metrics.Metric) error {
 	var err error
-	delays := []time.Duration{
-		time.Second,
-		3 * time.Second,
-		5 * time.Second,
-	}
-	for attempt := 0; attempt < len(delays); attempt++ {
-		time.Sleep(delays[attempt])
-		err = metrics.SendMetrics(url, key, metricSlice)
-		if err != nil {
-			attempt++
-		} else {
-			return err
+	for attempt := 0; attempt < len(cfg.Delays); attempt++ {
+		time.Sleep(cfg.Delays[attempt])
+		if err := metrics.SendMetrics(url, cfg.Key, metricSlice); err == nil {
+			return nil
 		}
+		attempt++
 	}
 	return err
 }
