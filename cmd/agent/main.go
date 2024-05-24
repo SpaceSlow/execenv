@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"math/rand"
 	"time"
 
@@ -24,6 +25,7 @@ func main() {
 
 	pollTick := time.Tick(pollInterval)
 	reportTick := time.Tick(reportInterval)
+	metricSender := metrics.NewMetricSender(url, cfg.Key)
 	//metricsCh := make(chan []metrics.Metric) TODO: goroutines for get metrics and send metrics
 
 	for {
@@ -44,24 +46,17 @@ func main() {
 					Value: pollCount,
 				},
 			)
+			metricSender.Push(metricSlice)
 		case <-reportTick:
-			err := metrics.SendMetrics(url, cfg.Key, metricSlice)
-			if err != nil {
-				go retrySendMetrics(cfg, url, metricSlice)
+			select {
+			case err := <-metrics.RetryFunc(metricSender.Send, cfg.Delays):
+				if err != nil {
+					log.Printf("sending error: %s", err)
+					continue
+				}
+				log.Printf("sended metrics")
 			}
 			pollCount = 0
 		}
 	}
-}
-
-func retrySendMetrics(cfg *Config, url string, metricSlice []metrics.Metric) error {
-	var err error
-	for attempt := 0; attempt < len(cfg.Delays); attempt++ {
-		time.Sleep(cfg.Delays[attempt])
-		if err := metrics.SendMetrics(url, cfg.Key, metricSlice); err == nil {
-			return nil
-		}
-		attempt++
-	}
-	return err
 }

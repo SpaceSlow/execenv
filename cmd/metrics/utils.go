@@ -3,12 +3,10 @@ package metrics
 import (
 	"bytes"
 	"compress/gzip"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"runtime"
+	"time"
 )
 
 func ParseMetricType(mType string) (MetricType, error) {
@@ -22,33 +20,26 @@ func ParseMetricType(mType string) (MetricType, error) {
 	}
 }
 
-func SendMetrics(url, key string, metrics []Metric) error {
-	jsonMetric, err := json.Marshal(metrics)
-	if err != nil {
-		return err
-	}
+func RetryFunc(f func() error, delays []time.Duration) chan error {
+	errorCh := make(chan error)
 
-	var hash string
-	if key != "" {
-		h := sha256.New()
-		h.Write(jsonMetric)
-		hash = hex.EncodeToString(h.Sum([]byte(key)))
-	}
+	go func() {
+		defer close(errorCh)
+		var err error
+		for attempt := 0; attempt < len(delays); attempt++ {
+			select {
+			case <-time.After(delays[attempt]):
+				if err = f(); err == nil {
+					errorCh <- nil
+					return
+				}
+			}
+			attempt++
+		}
+		errorCh <- err
+	}()
 
-	req, err := newCompressedRequest(http.MethodPost, url, jsonMetric)
-	if err != nil {
-		return err
-	}
-
-	if hash != "" {
-		req.Header.Set("Hash", hash)
-	}
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	return res.Body.Close()
+	return errorCh
 }
 
 func newCompressedRequest(method, url string, data []byte) (*http.Request, error) {
