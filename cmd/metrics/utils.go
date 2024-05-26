@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
+	cpu2 "github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/mem"
 	"math/rand"
 	"net/http"
 	"runtime"
+	"sync"
 	"time"
 )
 
@@ -64,8 +67,37 @@ func newCompressedRequest(method, url string, data []byte) (*http.Request, error
 	return req, nil
 }
 
+func fanIn(chs ...chan []Metric) chan []Metric {
+	var wg sync.WaitGroup
+	outCh := make(chan []Metric)
+
+	output := func(c chan []Metric) {
+		for m := range c {
+			outCh <- m
+		}
+		wg.Done()
+	}
+
+	wg.Add(len(chs))
+	for _, c := range chs {
+		go output(c)
+	}
+
+	go func() {
+		wg.Wait()
+		close(outCh)
+	}()
+
+	return outCh
+}
+
 func GetMetrics(metricsCh chan []Metric) {
-	metricSlice := GetRuntimeMetrics()
+	metricSlice := make([]Metric, 0)
+	runtimeMetricsCh := GetRuntimeMetrics()
+	gopsutilMetricsCh := GetGopsutilMetrics()
+	for m := range fanIn(runtimeMetricsCh, gopsutilMetricsCh) {
+		metricSlice = append(metricSlice, m...)
+	}
 	metricSlice = append(
 		metricSlice,
 		Metric{
@@ -77,152 +109,189 @@ func GetMetrics(metricsCh chan []Metric) {
 	metricsCh <- metricSlice
 }
 
-func GetRuntimeMetrics() []Metric {
-	var rtm runtime.MemStats
-	runtime.ReadMemStats(&rtm)
+func GetGopsutilMetrics() chan []Metric {
+	metricsCh := make(chan []Metric)
 
-	metrics := []Metric{
-		{
-			Type:  Gauge,
-			Name:  "Alloc",
-			Value: float64(rtm.Alloc),
-		},
-		{
-			Type:  Gauge,
-			Name:  "BuckHashSys",
-			Value: float64(rtm.BuckHashSys),
-		},
-		{
-			Type:  Gauge,
-			Name:  "Frees",
-			Value: float64(rtm.Frees),
-		},
-		{
-			Type:  Gauge,
-			Name:  "GCCPUFraction",
-			Value: float64(rtm.GCCPUFraction),
-		},
-		{
-			Type:  Gauge,
-			Name:  "GCSys",
-			Value: float64(rtm.GCSys),
-		},
-		{
-			Type:  Gauge,
-			Name:  "HeapAlloc",
-			Value: float64(rtm.HeapAlloc),
-		},
-		{
-			Type:  Gauge,
-			Name:  "HeapIdle",
-			Value: float64(rtm.HeapIdle),
-		},
-		{
-			Type:  Gauge,
-			Name:  "HeapInuse",
-			Value: float64(rtm.HeapInuse),
-		},
-		{
-			Type:  Gauge,
-			Name:  "HeapObjects",
-			Value: float64(rtm.HeapObjects),
-		},
-		{
-			Type:  Gauge,
-			Name:  "HeapReleased",
-			Value: float64(rtm.HeapReleased),
-		},
-		{
-			Type:  Gauge,
-			Name:  "HeapSys",
-			Value: float64(rtm.HeapSys),
-		},
-		{
-			Type:  Gauge,
-			Name:  "LastGC",
-			Value: float64(rtm.LastGC),
-		},
-		{
-			Type:  Gauge,
-			Name:  "Lookups",
-			Value: float64(rtm.Lookups),
-		},
-		{
-			Type:  Gauge,
-			Name:  "MCacheInuse",
-			Value: float64(rtm.MCacheInuse),
-		},
-		{
-			Type:  Gauge,
-			Name:  "MCacheSys",
-			Value: float64(rtm.MCacheSys),
-		},
-		{
-			Type:  Gauge,
-			Name:  "MSpanInuse",
-			Value: float64(rtm.MSpanInuse),
-		},
-		{
-			Type:  Gauge,
-			Name:  "MSpanSys",
-			Value: float64(rtm.MSpanSys),
-		},
-		{
-			Type:  Gauge,
-			Name:  "Mallocs",
-			Value: float64(rtm.Mallocs),
-		},
-		{
-			Type:  Gauge,
-			Name:  "NextGC",
-			Value: float64(rtm.NextGC),
-		},
-		{
-			Type:  Gauge,
-			Name:  "NumForcedGC",
-			Value: float64(rtm.NumForcedGC),
-		},
-		{
-			Type:  Gauge,
-			Name:  "NumGC",
-			Value: float64(rtm.NumGC),
-		},
-		{
-			Type:  Gauge,
-			Name:  "OtherSys",
-			Value: float64(rtm.OtherSys),
-		},
-		{
-			Type:  Gauge,
-			Name:  "PauseTotalNs",
-			Value: float64(rtm.PauseTotalNs),
-		},
-		{
-			Type:  Gauge,
-			Name:  "StackInuse",
-			Value: float64(rtm.StackInuse),
-		},
-		{
-			Type:  Gauge,
-			Name:  "PauseTotalNs",
-			Value: float64(rtm.PauseTotalNs),
-		},
-		{
-			Type:  Gauge,
-			Name:  "StackSys",
-			Value: float64(rtm.StackSys),
-		},
-		{
-			Type:  Gauge,
-			Name:  "Sys",
-			Value: float64(rtm.Sys),
-		},
-		{
-			Type:  Gauge,
-			Name:  "TotalAlloc",
-			Value: float64(rtm.TotalAlloc),
-		},
-	}
+	go func() {
+		defer close(metricsCh)
+		v, _ := mem.VirtualMemory()
+		cpu, _ := cpu2.Percent(0, false)
 
-	return metrics
+		metrics := []Metric{
+			{
+				Type:  Gauge,
+				Name:  "TotalMemory",
+				Value: float64(v.Total),
+			},
+			{
+				Type:  Gauge,
+				Name:  "FreeMemory",
+				Value: float64(v.Free),
+			},
+			{
+				Type:  Gauge,
+				Name:  "CPUtilization1",
+				Value: cpu[0],
+			},
+		}
+		metricsCh <- metrics
+	}()
+
+	return metricsCh
+}
+
+func GetRuntimeMetrics() chan []Metric {
+	metricsCh := make(chan []Metric)
+
+	go func() {
+		defer close(metricsCh)
+		var rtm runtime.MemStats
+		runtime.ReadMemStats(&rtm)
+
+		metrics := []Metric{
+			{
+				Type:  Gauge,
+				Name:  "Alloc",
+				Value: float64(rtm.Alloc),
+			},
+			{
+				Type:  Gauge,
+				Name:  "BuckHashSys",
+				Value: float64(rtm.BuckHashSys),
+			},
+			{
+				Type:  Gauge,
+				Name:  "Frees",
+				Value: float64(rtm.Frees),
+			},
+			{
+				Type:  Gauge,
+				Name:  "GCCPUFraction",
+				Value: float64(rtm.GCCPUFraction),
+			},
+			{
+				Type:  Gauge,
+				Name:  "GCSys",
+				Value: float64(rtm.GCSys),
+			},
+			{
+				Type:  Gauge,
+				Name:  "HeapAlloc",
+				Value: float64(rtm.HeapAlloc),
+			},
+			{
+				Type:  Gauge,
+				Name:  "HeapIdle",
+				Value: float64(rtm.HeapIdle),
+			},
+			{
+				Type:  Gauge,
+				Name:  "HeapInuse",
+				Value: float64(rtm.HeapInuse),
+			},
+			{
+				Type:  Gauge,
+				Name:  "HeapObjects",
+				Value: float64(rtm.HeapObjects),
+			},
+			{
+				Type:  Gauge,
+				Name:  "HeapReleased",
+				Value: float64(rtm.HeapReleased),
+			},
+			{
+				Type:  Gauge,
+				Name:  "HeapSys",
+				Value: float64(rtm.HeapSys),
+			},
+			{
+				Type:  Gauge,
+				Name:  "LastGC",
+				Value: float64(rtm.LastGC),
+			},
+			{
+				Type:  Gauge,
+				Name:  "Lookups",
+				Value: float64(rtm.Lookups),
+			},
+			{
+				Type:  Gauge,
+				Name:  "MCacheInuse",
+				Value: float64(rtm.MCacheInuse),
+			},
+			{
+				Type:  Gauge,
+				Name:  "MCacheSys",
+				Value: float64(rtm.MCacheSys),
+			},
+			{
+				Type:  Gauge,
+				Name:  "MSpanInuse",
+				Value: float64(rtm.MSpanInuse),
+			},
+			{
+				Type:  Gauge,
+				Name:  "MSpanSys",
+				Value: float64(rtm.MSpanSys),
+			},
+			{
+				Type:  Gauge,
+				Name:  "Mallocs",
+				Value: float64(rtm.Mallocs),
+			},
+			{
+				Type:  Gauge,
+				Name:  "NextGC",
+				Value: float64(rtm.NextGC),
+			},
+			{
+				Type:  Gauge,
+				Name:  "NumForcedGC",
+				Value: float64(rtm.NumForcedGC),
+			},
+			{
+				Type:  Gauge,
+				Name:  "NumGC",
+				Value: float64(rtm.NumGC),
+			},
+			{
+				Type:  Gauge,
+				Name:  "OtherSys",
+				Value: float64(rtm.OtherSys),
+			},
+			{
+				Type:  Gauge,
+				Name:  "PauseTotalNs",
+				Value: float64(rtm.PauseTotalNs),
+			},
+			{
+				Type:  Gauge,
+				Name:  "StackInuse",
+				Value: float64(rtm.StackInuse),
+			},
+			{
+				Type:  Gauge,
+				Name:  "PauseTotalNs",
+				Value: float64(rtm.PauseTotalNs),
+			},
+			{
+				Type:  Gauge,
+				Name:  "StackSys",
+				Value: float64(rtm.StackSys),
+			},
+			{
+				Type:  Gauge,
+				Name:  "Sys",
+				Value: float64(rtm.Sys),
+			},
+			{
+				Type:  Gauge,
+				Name:  "TotalAlloc",
+				Value: float64(rtm.TotalAlloc),
+			},
+		}
+		metricsCh <- metrics
+	}()
+
+	return metricsCh
 }
