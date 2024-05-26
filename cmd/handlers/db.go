@@ -17,5 +17,4 @@ func (h DBHandler) Ping(res http.ResponseWriter, _ *http.Request) {
 		return
 	}
 	res.WriteHeader(http.StatusInternalServerError)
-	return
 }

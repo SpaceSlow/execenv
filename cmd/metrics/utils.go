@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
-	cpu2 "github.com/shirou/gopsutil/cpu"
-	"github.com/shirou/gopsutil/mem"
 	"math/rand"
 	"net/http"
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/mem"
 )
 
 func ParseMetricType(mType string) (MetricType, error) {
@@ -115,7 +116,7 @@ func GetGopsutilMetrics() chan []Metric {
 	go func() {
 		defer close(metricsCh)
 		v, _ := mem.VirtualMemory()
-		cpu, _ := cpu2.Percent(0, false)
+		cpu, _ := cpu.Percent(0, false)
 
 		metrics := []Metric{
 			{
