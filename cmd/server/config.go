@@ -14,6 +14,7 @@ type Config struct {
 	NeededRestore bool             `env:"RESTORE"`
 	DatabaseDSN   string           `env:"DATABASE_DSN"`
 	Key           string           `env:"KEY"`
+	RateLimit     int              `env:"RATE_LIMIT"`
 }
 
 func GetConfigWithFlags() (*Config, error) {
@@ -43,6 +44,10 @@ func GetConfigWithFlags() (*Config, error) {
 
 	if cfg.Key == "" {
 		cfg.Key = flagKey
+	}
+
+	if cfg.RateLimit == 0 {
+		cfg.RateLimit = flagRateLimit
 	}
 
 	return cfg, nil
