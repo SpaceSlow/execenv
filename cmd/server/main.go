@@ -16,7 +16,7 @@ func runServer(middlewareHandlers ...func(next http.Handler) http.Handler) error
 		return err
 	}
 
-	cfg, err := GetConfigWithFlags() // TODO rate limit
+	cfg, err := GetConfigWithFlags()
 	if err != nil {
 		return err
 	}

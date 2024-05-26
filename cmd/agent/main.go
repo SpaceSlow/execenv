@@ -28,7 +28,7 @@ func main() {
 	pollTick := time.Tick(pollInterval)
 	reportTick := time.Tick(reportInterval)
 	metricSender := metrics.NewMetricSender(url, cfg.Key)
-	metricsCh := make(chan []metrics.Metric)
+	metricsCh := make(chan []metrics.Metric) // TODO: goroutines for get metrics and send metrics
 	closed := make(chan os.Signal, 1)
 	defer close(closed)
 	signal.Notify(closed, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
