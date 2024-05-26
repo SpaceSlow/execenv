@@ -16,51 +16,51 @@ type RetryDB struct {
 }
 
 func (db *RetryDB) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
-	row := db.DB.QueryRowContext(ctx, query, args...)
-	var pgConErr *pgconn.ConnectError
-	if row.Err() == nil || !errors.As(row.Err(), &pgConErr) {
-		return row
-	}
-
-	delays := []time.Duration{
-		time.Second,
-		3 * time.Second,
-		5 * time.Second,
-	}
-	for attempt := 0; attempt < len(delays); attempt++ {
-		time.Sleep(delays[attempt])
-		row = db.DB.QueryRowContext(ctx, query, args...)
+	rowCh := make(chan *sql.Row, 1)
+	defer close(rowCh)
+	queryRowContext := func() error {
+		row := db.DB.QueryRowContext(ctx, query, args...)
+		var pgConErr *pgconn.ConnectError
 		if row.Err() != nil && errors.As(row.Err(), &pgConErr) {
-			attempt++
-		} else {
-			return row
+			if len(rowCh) > 0 {
+				<-rowCh
+			}
+			rowCh <- row
+			return row.Err()
 		}
+		if len(rowCh) > 0 {
+			<-rowCh
+		}
+		rowCh <- row
+		return nil
 	}
-	return row
+	<-metrics.RetryFunc(queryRowContext, []time.Duration{time.Second, 3 * time.Second, 5 * time.Second}) // TODO убрать в конфиг
+
+	return <-rowCh
 }
 
 func (db *RetryDB) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	res, err := db.DB.ExecContext(ctx, query, args...)
-	var pgConErr *pgconn.ConnectError
-	if err == nil || !errors.As(err, &pgConErr) {
-		return res, err
-	}
-
-	delays := []time.Duration{
-		time.Second,
-		3 * time.Second,
-		5 * time.Second,
-	}
-	for attempt := 0; attempt < len(delays); attempt++ {
-		time.Sleep(delays[attempt])
-		res, err = db.DB.ExecContext(ctx, query, args...)
+	resultCh := make(chan sql.Result, 1)
+	defer close(resultCh)
+	execContext := func() error {
+		res, err := db.DB.ExecContext(ctx, query, args...)
+		var pgConErr *pgconn.ConnectError
 		if err != nil && errors.As(err, &pgConErr) {
-			attempt++
-		} else {
-			return res, err
+			if len(resultCh) > 0 {
+				<-resultCh
+			}
+			resultCh <- res
+			return err
 		}
+		if len(resultCh) > 0 {
+			<-resultCh
+		}
+		resultCh <- res
+		return nil
 	}
-	return res, err
+	err := <-metrics.RetryFunc(execContext, []time.Duration{time.Second, 3 * time.Second, 5 * time.Second}) // TODO убрать в конфиг
+
+	return <-resultCh, err
 }
 
 type DBStorage struct {
