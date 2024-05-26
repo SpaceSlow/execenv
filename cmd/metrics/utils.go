@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"runtime"
 	"time"
@@ -27,14 +28,11 @@ func RetryFunc(f func() error, delays []time.Duration) chan error {
 		defer close(errorCh)
 		var err error
 		for attempt := 0; attempt < len(delays); attempt++ {
-			select {
-			case <-time.After(delays[attempt]):
-				if err = f(); err == nil {
-					errorCh <- nil
-					return
-				}
+			if err = f(); err == nil {
+				errorCh <- nil
+				return
 			}
-			attempt++
+			<-time.After(delays[attempt])
 		}
 		errorCh <- err
 	}()
@@ -64,6 +62,19 @@ func newCompressedRequest(method, url string, data []byte) (*http.Request, error
 	req.Header.Set("Content-Type", "application/json")
 
 	return req, nil
+}
+
+func GetMetrics(metricsCh chan []Metric) {
+	metricSlice := GetRuntimeMetrics()
+	metricSlice = append(
+		metricSlice,
+		Metric{
+			Type:  Gauge,
+			Name:  "RandomValue",
+			Value: rand.Float64(),
+		},
+	)
+	metricsCh <- metricSlice
 }
 
 func GetRuntimeMetrics() []Metric {

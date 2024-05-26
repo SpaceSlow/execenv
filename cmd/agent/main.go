@@ -2,7 +2,9 @@ package main
 
 import (
 	"log"
-	"math/rand"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/SpaceSlow/execenv/cmd/metrics"
@@ -26,37 +28,34 @@ func main() {
 	pollTick := time.Tick(pollInterval)
 	reportTick := time.Tick(reportInterval)
 	metricSender := metrics.NewMetricSender(url, cfg.Key)
-	//metricsCh := make(chan []metrics.Metric) TODO: goroutines for get metrics and send metrics
+	metricsCh := make(chan []metrics.Metric) // TODO: goroutines for get metrics and send metrics
+	closed := make(chan os.Signal, 1)
+	defer close(closed)
+	signal.Notify(closed, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
 
 	for {
 		select {
 		case <-pollTick:
+			go metrics.GetMetrics(metricsCh)
+			metricSlice = <-metricsCh
 			pollCount++
-			metricSlice = metrics.GetRuntimeMetrics()
-			metricSlice = append(
-				metricSlice,
-				metrics.Metric{
-					Type:  metrics.Gauge,
-					Name:  "RandomValue",
-					Value: rand.Float64(),
-				},
-				metrics.Metric{
-					Type:  metrics.Counter,
-					Name:  "PollCount",
-					Value: pollCount,
-				},
-			)
+			metricSlice = append(metricSlice, metrics.Metric{
+				Type:  metrics.Counter,
+				Name:  "PollCount",
+				Value: pollCount,
+			})
 			metricSender.Push(metricSlice)
 		case <-reportTick:
-			select {
-			case err := <-metrics.RetryFunc(metricSender.Send, cfg.Delays):
-				if err != nil {
-					log.Printf("sending error: %s", err)
-					continue
-				}
-				log.Printf("sended metrics")
+			err := <-metrics.RetryFunc(metricSender.Send, cfg.Delays)
+			if err != nil {
+				log.Printf("sending error: %s", err)
+				continue
 			}
+			log.Printf("sended metrics")
 			pollCount = 0
+		case <-closed:
+			close(metricsCh)
+			log.Printf("stopped agent")
 		}
 	}
 }
