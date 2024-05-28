@@ -23,7 +23,7 @@ func runServer(middlewareHandlers ...func(next http.Handler) http.Handler) error
 
 	var storage storages.MetricStorage
 	if cfg.DatabaseDSN != "" {
-		storage, err = storages.NewDBStorage(context.Background(), cfg.DatabaseDSN)
+		storage, err = storages.NewDBStorage(context.Background(), cfg.DatabaseDSN, cfg.Delays)
 		logger.Log.Info("using storage DB", zap.String("DSN", cfg.DatabaseDSN))
 	} else {
 		storage, err = storages.NewMemFileStorage(cfg.StoragePath, cfg.StoreInterval, cfg.NeededRestore)

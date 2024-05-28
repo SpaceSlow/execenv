@@ -13,6 +13,7 @@ import (
 
 type RetryDB struct {
 	*sql.DB
+	delays []time.Duration
 }
 
 func (db *RetryDB) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
@@ -34,7 +35,7 @@ func (db *RetryDB) QueryRowContext(ctx context.Context, query string, args ...an
 		rowCh <- row
 		return nil
 	}
-	<-metrics.RetryFunc(queryRowContext, []time.Duration{time.Second, 3 * time.Second, 5 * time.Second}) // TODO убрать в конфиг
+	<-metrics.RetryFunc(queryRowContext, db.delays)
 
 	return <-rowCh
 }
@@ -58,7 +59,7 @@ func (db *RetryDB) ExecContext(ctx context.Context, query string, args ...any) (
 		resultCh <- res
 		return nil
 	}
-	err := <-metrics.RetryFunc(execContext, []time.Duration{time.Second, 3 * time.Second, 5 * time.Second}) // TODO убрать в конфиг
+	err := <-metrics.RetryFunc(execContext, db.delays)
 
 	return <-resultCh, err
 }
@@ -230,13 +231,13 @@ func (s DBStorage) CheckConnection() bool {
 	return s.db.PingContext(s.ctx) == nil
 }
 
-func NewDBStorage(ctx context.Context, dsn string) (*DBStorage, error) {
+func NewDBStorage(ctx context.Context, dsn string, delays []time.Duration) (*DBStorage, error) {
 	db, err := sql.Open("pgx", dsn)
 
 	if err != nil {
 		return nil, err
 	}
-	rdb := RetryDB{db}
+	rdb := RetryDB{db, delays}
 
 	ok, err := checkExistMetricTable(ctx, rdb)
 	if err != nil {
