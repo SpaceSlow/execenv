@@ -36,6 +36,7 @@ type MetricWorkers struct {
 }
 
 func (mw *MetricWorkers) Send(metrics []Metric) {
+	pollCount := mw.pollCount.Load()
 	jsonMetric, err := json.Marshal(metrics)
 	if err != nil {
 		mw.errorsCh <- err
@@ -85,7 +86,7 @@ func (mw *MetricWorkers) Send(metrics []Metric) {
 		mw.errorsCh <- err
 		return
 	}
-	mw.pollCount.Swap(0)
+	mw.pollCount.Add(-pollCount)
 	mw.errorsCh <- nil
 }
 
