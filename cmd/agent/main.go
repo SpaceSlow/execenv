@@ -1,7 +1,10 @@
 package main
 
 import (
-	"math/rand"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/SpaceSlow/execenv/cmd/metrics"
@@ -14,59 +17,47 @@ func main() {
 		panic(err)
 	}
 
-	var metricSlice []metrics.Metric
-
 	url := "http://" + cfg.ServerAddr.String() + "/updates/"
 	pollInterval := time.Duration(cfg.PollInterval) * time.Second
 	reportInterval := time.Duration(cfg.ReportInterval) * time.Second
 
 	pollTick := time.Tick(pollInterval)
 	reportTick := time.Tick(reportInterval)
-	var pollCount int64
+	metricWorkers := metrics.NewMetricWorkers(cfg.RateLimit, url, cfg.Key, cfg.Delays)
+	sendCh := make(chan []metrics.Metric, cfg.RateLimit)
+	pollCh := make(chan []metrics.Metric, 1)
+
+	for w := 0; w < cfg.RateLimit; w++ {
+		go func(sendCh chan []metrics.Metric) {
+			for ms := range sendCh {
+				go metricWorkers.Send(ms)
+			}
+		}(sendCh)
+	}
+
+	closed := make(chan os.Signal, 1)
+	defer close(closed)
+	signal.Notify(closed, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
 
 	for {
 		select {
+		case <-closed:
+			close(sendCh)
+			close(pollCh)
+			metricWorkers.Close()
+			log.Fatal("stopped agent")
 		case <-pollTick:
-			pollCount++
-			metricSlice = metrics.GetRuntimeMetrics()
-			metricSlice = append(
-				metricSlice,
-				metrics.Metric{
-					Type:  metrics.Gauge,
-					Name:  "RandomValue",
-					Value: rand.Float64(),
-				},
-				metrics.Metric{
-					Type:  metrics.Counter,
-					Name:  "PollCount",
-					Value: pollCount,
-				},
-			)
+			go metricWorkers.Poll(pollCh)
+			log.Println("polled metrics")
 		case <-reportTick:
-			err := metrics.SendMetrics(url, metricSlice)
+			metricSlice := <-pollCh
+			sendCh <- metricSlice
+		case err := <-metricWorkers.Err():
 			if err != nil {
-				go retrySendMetrics(url, metricSlice)
+				log.Println(err)
+				continue
 			}
-			pollCount = 0
+			log.Println("sended metrics")
 		}
 	}
-}
-
-func retrySendMetrics(url string, metricSlice []metrics.Metric) error {
-	var err error
-	delays := []time.Duration{
-		time.Second,
-		3 * time.Second,
-		5 * time.Second,
-	}
-	for attempt := 0; attempt < len(delays); attempt++ {
-		time.Sleep(delays[attempt])
-		err = metrics.SendMetrics(url, metricSlice)
-		if err != nil {
-			attempt++
-		} else {
-			return err
-		}
-	}
-	return err
 }

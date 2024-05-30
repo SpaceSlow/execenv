@@ -3,10 +3,10 @@ package metrics
 import (
 	"bytes"
 	"compress/gzip"
-	"encoding/json"
 	"fmt"
 	"net/http"
-	"runtime"
+	"sync"
+	"time"
 )
 
 func ParseMetricType(mType string) (MetricType, error) {
@@ -20,22 +20,23 @@ func ParseMetricType(mType string) (MetricType, error) {
 	}
 }
 
-func SendMetrics(url string, metrics []Metric) error {
-	jsonMetric, err := json.Marshal(metrics)
-	if err != nil {
-		return err
-	}
+func RetryFunc(f func() error, delays []time.Duration) chan error {
+	errorCh := make(chan error)
 
-	req, err := newCompressedRequest(http.MethodPost, url, jsonMetric)
-	if err != nil {
-		return err
-	}
+	go func() {
+		defer close(errorCh)
+		var err error
+		for attempt := 0; attempt < len(delays); attempt++ {
+			if err = f(); err == nil {
+				errorCh <- nil
+				return
+			}
+			<-time.After(delays[attempt])
+		}
+		errorCh <- err
+	}()
 
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	return res.Body.Close()
+	return errorCh
 }
 
 func newCompressedRequest(method, url string, data []byte) (*http.Request, error) {
@@ -62,152 +63,26 @@ func newCompressedRequest(method, url string, data []byte) (*http.Request, error
 	return req, nil
 }
 
-func GetRuntimeMetrics() []Metric {
-	var rtm runtime.MemStats
-	runtime.ReadMemStats(&rtm)
+func fanIn(chs ...chan []Metric) chan []Metric {
+	var wg sync.WaitGroup
+	outCh := make(chan []Metric)
 
-	metrics := []Metric{
-		{
-			Type:  Gauge,
-			Name:  "Alloc",
-			Value: float64(rtm.Alloc),
-		},
-		{
-			Type:  Gauge,
-			Name:  "BuckHashSys",
-			Value: float64(rtm.BuckHashSys),
-		},
-		{
-			Type:  Gauge,
-			Name:  "Frees",
-			Value: float64(rtm.Frees),
-		},
-		{
-			Type:  Gauge,
-			Name:  "GCCPUFraction",
-			Value: float64(rtm.GCCPUFraction),
-		},
-		{
-			Type:  Gauge,
-			Name:  "GCSys",
-			Value: float64(rtm.GCSys),
-		},
-		{
-			Type:  Gauge,
-			Name:  "HeapAlloc",
-			Value: float64(rtm.HeapAlloc),
-		},
-		{
-			Type:  Gauge,
-			Name:  "HeapIdle",
-			Value: float64(rtm.HeapIdle),
-		},
-		{
-			Type:  Gauge,
-			Name:  "HeapInuse",
-			Value: float64(rtm.HeapInuse),
-		},
-		{
-			Type:  Gauge,
-			Name:  "HeapObjects",
-			Value: float64(rtm.HeapObjects),
-		},
-		{
-			Type:  Gauge,
-			Name:  "HeapReleased",
-			Value: float64(rtm.HeapReleased),
-		},
-		{
-			Type:  Gauge,
-			Name:  "HeapSys",
-			Value: float64(rtm.HeapSys),
-		},
-		{
-			Type:  Gauge,
-			Name:  "LastGC",
-			Value: float64(rtm.LastGC),
-		},
-		{
-			Type:  Gauge,
-			Name:  "Lookups",
-			Value: float64(rtm.Lookups),
-		},
-		{
-			Type:  Gauge,
-			Name:  "MCacheInuse",
-			Value: float64(rtm.MCacheInuse),
-		},
-		{
-			Type:  Gauge,
-			Name:  "MCacheSys",
-			Value: float64(rtm.MCacheSys),
-		},
-		{
-			Type:  Gauge,
-			Name:  "MSpanInuse",
-			Value: float64(rtm.MSpanInuse),
-		},
-		{
-			Type:  Gauge,
-			Name:  "MSpanSys",
-			Value: float64(rtm.MSpanSys),
-		},
-		{
-			Type:  Gauge,
-			Name:  "Mallocs",
-			Value: float64(rtm.Mallocs),
-		},
-		{
-			Type:  Gauge,
-			Name:  "NextGC",
-			Value: float64(rtm.NextGC),
-		},
-		{
-			Type:  Gauge,
-			Name:  "NumForcedGC",
-			Value: float64(rtm.NumForcedGC),
-		},
-		{
-			Type:  Gauge,
-			Name:  "NumGC",
-			Value: float64(rtm.NumGC),
-		},
-		{
-			Type:  Gauge,
-			Name:  "OtherSys",
-			Value: float64(rtm.OtherSys),
-		},
-		{
-			Type:  Gauge,
-			Name:  "PauseTotalNs",
-			Value: float64(rtm.PauseTotalNs),
-		},
-		{
-			Type:  Gauge,
-			Name:  "StackInuse",
-			Value: float64(rtm.StackInuse),
-		},
-		{
-			Type:  Gauge,
-			Name:  "PauseTotalNs",
-			Value: float64(rtm.PauseTotalNs),
-		},
-		{
-			Type:  Gauge,
-			Name:  "StackSys",
-			Value: float64(rtm.StackSys),
-		},
-		{
-			Type:  Gauge,
-			Name:  "Sys",
-			Value: float64(rtm.Sys),
-		},
-		{
-			Type:  Gauge,
-			Name:  "TotalAlloc",
-			Value: float64(rtm.TotalAlloc),
-		},
+	output := func(c chan []Metric) {
+		for m := range c {
+			outCh <- m
+		}
+		wg.Done()
 	}
 
-	return metrics
+	wg.Add(len(chs))
+	for _, c := range chs {
+		go output(c)
+	}
+
+	go func() {
+		wg.Wait()
+		close(outCh)
+	}()
+
+	return outCh
 }

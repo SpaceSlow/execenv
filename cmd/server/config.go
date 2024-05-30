@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"time"
 
 	"github.com/SpaceSlow/execenv/cmd/flags"
 	"github.com/caarlos0/env"
@@ -13,6 +14,8 @@ type Config struct {
 	StoragePath   string           `env:"FILE_STORAGE_PATH"`
 	NeededRestore bool             `env:"RESTORE"`
 	DatabaseDSN   string           `env:"DATABASE_DSN"`
+	Key           string           `env:"KEY"`
+	Delays        []time.Duration
 }
 
 func GetConfigWithFlags() (*Config, error) {
@@ -38,6 +41,16 @@ func GetConfigWithFlags() (*Config, error) {
 
 	if _, ok := os.LookupEnv("DATABASE_DSN"); !ok {
 		cfg.DatabaseDSN = flagDatabaseDSN
+	}
+
+	if cfg.Key == "" {
+		cfg.Key = flagKey
+	}
+
+	cfg.Delays = []time.Duration{
+		time.Second,
+		3 * time.Second,
+		5 * time.Second,
 	}
 
 	return cfg, nil

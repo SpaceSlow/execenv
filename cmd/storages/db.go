@@ -13,54 +13,55 @@ import (
 
 type RetryDB struct {
 	*sql.DB
+	delays []time.Duration
 }
 
 func (db *RetryDB) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
-	row := db.DB.QueryRowContext(ctx, query, args...)
-	var pgConErr *pgconn.ConnectError
-	if row.Err() == nil || !errors.As(row.Err(), &pgConErr) {
-		return row
-	}
-
-	delays := []time.Duration{
-		time.Second,
-		3 * time.Second,
-		5 * time.Second,
-	}
-	for attempt := 0; attempt < len(delays); attempt++ {
-		time.Sleep(delays[attempt])
-		row = db.DB.QueryRowContext(ctx, query, args...)
+	rowCh := make(chan *sql.Row, 1)
+	defer close(rowCh)
+	queryRowContext := func() error {
+		row := db.DB.QueryRowContext(ctx, query, args...)
+		var pgConErr *pgconn.ConnectError
 		if row.Err() != nil && errors.As(row.Err(), &pgConErr) {
-			attempt++
-		} else {
-			return row
+			if len(rowCh) > 0 {
+				<-rowCh
+			}
+			rowCh <- row
+			return row.Err()
 		}
+		if len(rowCh) > 0 {
+			<-rowCh
+		}
+		rowCh <- row
+		return nil
 	}
-	return row
+	<-metrics.RetryFunc(queryRowContext, db.delays)
+
+	return <-rowCh
 }
 
 func (db *RetryDB) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	res, err := db.DB.ExecContext(ctx, query, args...)
-	var pgConErr *pgconn.ConnectError
-	if err == nil || !errors.As(err, &pgConErr) {
-		return res, err
-	}
-
-	delays := []time.Duration{
-		time.Second,
-		3 * time.Second,
-		5 * time.Second,
-	}
-	for attempt := 0; attempt < len(delays); attempt++ {
-		time.Sleep(delays[attempt])
-		res, err = db.DB.ExecContext(ctx, query, args...)
+	resultCh := make(chan sql.Result, 1)
+	defer close(resultCh)
+	execContext := func() error {
+		res, err := db.DB.ExecContext(ctx, query, args...)
+		var pgConErr *pgconn.ConnectError
 		if err != nil && errors.As(err, &pgConErr) {
-			attempt++
-		} else {
-			return res, err
+			if len(resultCh) > 0 {
+				<-resultCh
+			}
+			resultCh <- res
+			return err
 		}
+		if len(resultCh) > 0 {
+			<-resultCh
+		}
+		resultCh <- res
+		return nil
 	}
-	return res, err
+	err := <-metrics.RetryFunc(execContext, db.delays)
+
+	return <-resultCh, err
 }
 
 type DBStorage struct {
@@ -230,13 +231,13 @@ func (s DBStorage) CheckConnection() bool {
 	return s.db.PingContext(s.ctx) == nil
 }
 
-func NewDBStorage(ctx context.Context, dsn string) (*DBStorage, error) {
+func NewDBStorage(ctx context.Context, dsn string, delays []time.Duration) (*DBStorage, error) {
 	db, err := sql.Open("pgx", dsn)
 
 	if err != nil {
 		return nil, err
 	}
-	rdb := RetryDB{db}
+	rdb := RetryDB{db, delays}
 
 	ok, err := checkExistMetricTable(ctx, rdb)
 	if err != nil {
