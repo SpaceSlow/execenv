@@ -1,9 +1,10 @@
 package routers
 
 import (
+	"github.com/go-chi/chi/v5"
+
 	"github.com/SpaceSlow/execenv/cmd/handlers"
 	"github.com/SpaceSlow/execenv/cmd/storages"
-	"github.com/go-chi/chi/v5"
 )
 
 func MetricRouter(storage storages.MetricStorage) chi.Router {

@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
+	"go.uber.org/zap"
+
 	"github.com/SpaceSlow/execenv/cmd/logger"
 	"github.com/SpaceSlow/execenv/cmd/middlewares"
 	"github.com/SpaceSlow/execenv/cmd/routers"
 	"github.com/SpaceSlow/execenv/cmd/storages"
-	"go.uber.org/zap"
 )
 
 func runServer(middlewareHandlers ...func(next http.Handler) http.Handler) error {

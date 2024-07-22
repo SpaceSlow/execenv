@@ -3,9 +3,10 @@ package storages
 import (
 	"testing"
 
-	"github.com/SpaceSlow/execenv/cmd/metrics"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/SpaceSlow/execenv/cmd/metrics"
 )
 
 func TestMemStorage_Add(t *testing.T) {
