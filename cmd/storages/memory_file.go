@@ -31,12 +31,12 @@ func (s *MemFileStorage) Add(metric *metrics.Metric) (*metrics.Metric, error) {
 	return updMetric, s.SaveMetricsToFile()
 }
 
-func (s *MemFileStorage) Batch(metricSlice []metrics.Metric) ([]metrics.Metric, error) {
-	updMetrics, err := s.MemStorage.Batch(metricSlice)
+func (s *MemFileStorage) Batch(metricSlice []metrics.Metric) error {
+	err := s.MemStorage.Batch(metricSlice)
 	if err != nil || !s.isSyncStore {
-		return updMetrics, err
+		return err
 	}
-	return updMetrics, s.SaveMetricsToFile()
+	return s.SaveMetricsToFile()
 }
 
 func (s *MemFileStorage) Close() error {
@@ -110,7 +110,7 @@ func (s *MemFileStorage) startStoreMetricsPerSecondsTask(secs uint) {
 
 func NewMemFileStorage(filename string, storePerSeconds uint, neededRestore bool) (*MemFileStorage, error) {
 	storage := &MemFileStorage{
-		MemStorage: &MemStorage{counters: make(map[string]int64), gauges: make(map[string]float64)},
+		MemStorage: NewMemStorage(),
 		f:          nil,
 	}
 

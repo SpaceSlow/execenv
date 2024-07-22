@@ -6,10 +6,39 @@ import (
 	"github.com/SpaceSlow/execenv/cmd/metrics"
 )
 
+type counters map[string]int64
+
+func (c counters) Add(metric *metrics.Metric) (*metrics.Metric, error) {
+	prevValue := c[metric.Name]
+	value, ok := metric.Value.(int64)
+	if !ok {
+		return nil, metrics.ErrIncorrectMetricTypeOrValue
+	}
+	updValue := prevValue + value
+	updMetric := metric.Copy()
+	updMetric.Value = updValue
+	c[metric.Name] = updValue
+
+	return updMetric, nil
+}
+
+type gauges map[string]float64
+
+func (g gauges) Add(metric *metrics.Metric) (*metrics.Metric, error) {
+	value, ok := metric.Value.(float64)
+	if !ok {
+		return nil, metrics.ErrIncorrectMetricTypeOrValue
+	}
+	updMetric := metric.Copy()
+	g[metric.Name] = value
+
+	return updMetric, nil
+}
+
 type MemStorage struct {
 	mu       sync.Mutex
-	counters map[string]int64
-	gauges   map[string]float64
+	counters counters
+	gauges   gauges
 }
 
 func NewMemStorage() *MemStorage {
@@ -20,27 +49,20 @@ func (storage *MemStorage) Add(metric *metrics.Metric) (*metrics.Metric, error) 
 	storage.mu.Lock()
 	defer storage.mu.Unlock()
 
-	var updMetric *metrics.Metric
+	var (
+		updMetric *metrics.Metric
+		err       error
+	)
 	switch metric.Type {
 	case metrics.Counter:
-		prevValue := storage.counters[metric.Name]
-		value, ok := metric.Value.(int64)
-		if !ok {
-			return nil, metrics.ErrIncorrectMetricTypeOrValue
-		}
-		updValue := prevValue + value
-		updMetric = metric.Copy()
-		updMetric.Value = updValue
-		storage.counters[metric.Name] = updValue
+		updMetric, err = storage.counters.Add(metric)
 	case metrics.Gauge:
-		value, ok := metric.Value.(float64)
-		if !ok {
-			return nil, metrics.ErrIncorrectMetricTypeOrValue
-		}
-		updMetric = metric.Copy()
-		storage.gauges[metric.Name] = value
+		updMetric, err = storage.gauges.Add(metric)
 	default:
 		return nil, metrics.ErrIncorrectMetricTypeOrValue
+	}
+	if err != nil {
+		return nil, err
 	}
 	return updMetric, nil
 }
@@ -98,14 +120,12 @@ func (storage *MemStorage) Close() error {
 	return nil
 }
 
-func (storage *MemStorage) Batch(metricSlice []metrics.Metric) ([]metrics.Metric, error) {
-	updMetrics := make([]metrics.Metric, 0, len(metricSlice))
+func (storage *MemStorage) Batch(metricSlice []metrics.Metric) error {
 	for _, metric := range metricSlice {
-		updMetric, err := storage.Add(&metric)
+		_, err := storage.Add(&metric)
 		if err != nil {
-			return updMetrics, err
+			return err
 		}
-		updMetrics = append(updMetrics, *updMetric)
 	}
-	return updMetrics, nil
+	return nil
 }
