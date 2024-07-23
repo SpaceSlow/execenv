@@ -183,7 +183,11 @@ func TestDBStorage_Add(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := storage.Add(tt.metric)
 			require.Equal(t, tt.wantErr, err)
-			assert.ObjectsAreEqual(tt.wantMetric, got)
+			assert.Equal(t, tt.wantMetric, got)
+
+			stored, _ := storage.Get(tt.metric.Type, tt.metric.Name)
+			assert.ObjectsAreEqual(tt.wantMetric, stored)
+
 		})
 	}
 }
