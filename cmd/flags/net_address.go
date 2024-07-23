@@ -1,6 +1,8 @@
 package flags
 
 import (
+	"encoding"
+	"flag"
 	"strconv"
 	"strings"
 )
@@ -10,13 +12,14 @@ const (
 	MaxPortNumber = 65535
 )
 
+var (
+	_ flag.Value               = (*NetAddress)(nil)
+	_ encoding.TextUnmarshaler = (*NetAddress)(nil)
+)
+
 type NetAddress struct {
 	Host string
 	Port int
-}
-
-func (a NetAddress) Type() string {
-	return "NetAddress"
 }
 
 func (a NetAddress) String() string {

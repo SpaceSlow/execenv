@@ -12,6 +12,8 @@ import (
 	"github.com/SpaceSlow/execenv/cmd/metrics"
 )
 
+var _ MetricStorage = (*DBStorage)(nil)
+
 type RetryDB struct {
 	*sql.DB
 	delays []time.Duration
@@ -68,6 +70,31 @@ func (db *RetryDB) ExecContext(ctx context.Context, query string, args ...any) (
 type DBStorage struct {
 	ctx context.Context
 	db  RetryDB
+}
+
+func NewDBStorage(ctx context.Context, dsn string, delays []time.Duration) (*DBStorage, error) {
+	db, err := sql.Open("pgx", dsn)
+
+	if err != nil {
+		return nil, err
+	}
+	rdb := RetryDB{db, delays}
+
+	ok, err := checkExistMetricTable(ctx, rdb)
+	if err != nil {
+		return nil, err
+	}
+
+	if !ok {
+		if err := createMetricsTable(ctx, rdb); err != nil {
+			return nil, err
+		}
+	}
+
+	return &DBStorage{
+		ctx: ctx,
+		db:  rdb,
+	}, nil
 }
 
 func (s DBStorage) Add(metric *metrics.Metric) (*metrics.Metric, error) {
@@ -207,31 +234,6 @@ func (s DBStorage) Close() error {
 
 func (s DBStorage) CheckConnection() bool {
 	return s.db.PingContext(s.ctx) == nil
-}
-
-func NewDBStorage(ctx context.Context, dsn string, delays []time.Duration) (*DBStorage, error) {
-	db, err := sql.Open("pgx", dsn)
-
-	if err != nil {
-		return nil, err
-	}
-	rdb := RetryDB{db, delays}
-
-	ok, err := checkExistMetricTable(ctx, rdb)
-	if err != nil {
-		return nil, err
-	}
-
-	if !ok {
-		if err := createMetricsTable(ctx, rdb); err != nil {
-			return nil, err
-		}
-	}
-
-	return &DBStorage{
-		ctx: ctx,
-		db:  rdb,
-	}, nil
 }
 
 func checkExistMetricTable(ctx context.Context, db RetryDB) (bool, error) {

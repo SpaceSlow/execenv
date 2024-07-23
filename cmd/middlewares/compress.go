@@ -8,6 +8,11 @@ import (
 	"strings"
 )
 
+var (
+	_ http.ResponseWriter = (*compressResponseWriter)(nil)
+	_ io.ReadCloser       = (*compressReader)(nil)
+)
+
 const CompressionAlgorithm = "gzip"
 
 var SupportedContentTypes = []string{"application/json", "text/html"}
@@ -15,6 +20,13 @@ var SupportedContentTypes = []string{"application/json", "text/html"}
 type compressResponseWriter struct {
 	http.ResponseWriter
 	compressWriter *gzip.Writer
+}
+
+func newCompressResponseWriter(w http.ResponseWriter) *compressResponseWriter {
+	return &compressResponseWriter{
+		ResponseWriter: w,
+		compressWriter: gzip.NewWriter(w),
+	}
 }
 
 func (w compressResponseWriter) Write(b []byte) (int, error) {
@@ -33,27 +45,9 @@ func (w compressResponseWriter) WriteHeader(statusCode int) {
 	w.ResponseWriter.WriteHeader(statusCode)
 }
 
-func newCompressResponseWriter(w http.ResponseWriter) *compressResponseWriter {
-	return &compressResponseWriter{
-		ResponseWriter: w,
-		compressWriter: gzip.NewWriter(w),
-	}
-}
-
 type compressReader struct {
 	io.ReadCloser
 	zr *gzip.Reader
-}
-
-func (c compressReader) Read(p []byte) (n int, err error) {
-	return c.zr.Read(p)
-}
-
-func (c *compressReader) Close() error {
-	if err := c.ReadCloser.Close(); err != nil {
-		return err
-	}
-	return c.zr.Close()
 }
 
 func newCompressReader(r io.ReadCloser) (*compressReader, error) {
@@ -66,6 +60,17 @@ func newCompressReader(r io.ReadCloser) (*compressReader, error) {
 		ReadCloser: r,
 		zr:         zr,
 	}, nil
+}
+
+func (c compressReader) Read(p []byte) (n int, err error) {
+	return c.zr.Read(p)
+}
+
+func (c *compressReader) Close() error {
+	if err := c.ReadCloser.Close(); err != nil {
+		return err
+	}
+	return c.zr.Close()
 }
 
 func WithCompressing(next http.Handler) http.Handler {

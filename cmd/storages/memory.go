@@ -6,34 +6,7 @@ import (
 	"github.com/SpaceSlow/execenv/cmd/metrics"
 )
 
-type counters map[string]int64
-
-func (c counters) Add(metric *metrics.Metric) (*metrics.Metric, error) {
-	prevValue := c[metric.Name]
-	value, ok := metric.Value.(int64)
-	if !ok {
-		return nil, metrics.ErrIncorrectMetricTypeOrValue
-	}
-	updValue := prevValue + value
-	updMetric := metric.Copy()
-	updMetric.Value = updValue
-	c[metric.Name] = updValue
-
-	return updMetric, nil
-}
-
-type gauges map[string]float64
-
-func (g gauges) Add(metric *metrics.Metric) (*metrics.Metric, error) {
-	value, ok := metric.Value.(float64)
-	if !ok {
-		return nil, metrics.ErrIncorrectMetricTypeOrValue
-	}
-	updMetric := metric.Copy()
-	g[metric.Name] = value
-
-	return updMetric, nil
-}
+var _ MetricStorage = (*MemStorage)(nil)
 
 type MemStorage struct {
 	mu       sync.Mutex
@@ -128,4 +101,33 @@ func (storage *MemStorage) Batch(metricSlice []metrics.Metric) error {
 		}
 	}
 	return nil
+}
+
+type counters map[string]int64
+
+func (c counters) Add(metric *metrics.Metric) (*metrics.Metric, error) {
+	prevValue := c[metric.Name]
+	value, ok := metric.Value.(int64)
+	if !ok {
+		return nil, metrics.ErrIncorrectMetricTypeOrValue
+	}
+	updValue := prevValue + value
+	updMetric := metric.Copy()
+	updMetric.Value = updValue
+	c[metric.Name] = updValue
+
+	return updMetric, nil
+}
+
+type gauges map[string]float64
+
+func (g gauges) Add(metric *metrics.Metric) (*metrics.Metric, error) {
+	value, ok := metric.Value.(float64)
+	if !ok {
+		return nil, metrics.ErrIncorrectMetricTypeOrValue
+	}
+	updMetric := metric.Copy()
+	g[metric.Name] = value
+
+	return updMetric, nil
 }

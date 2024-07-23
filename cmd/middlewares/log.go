@@ -9,6 +9,8 @@ import (
 	"github.com/SpaceSlow/execenv/cmd/logger"
 )
 
+var _ http.ResponseWriter = (*loggingResponseWriter)(nil)
+
 type Response struct {
 	statusCode int
 	size       int

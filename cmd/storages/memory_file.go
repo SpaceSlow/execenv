@@ -12,12 +12,47 @@ import (
 	"github.com/SpaceSlow/execenv/cmd/metrics"
 )
 
+var _ MetricStorage = (*MemFileStorage)(nil)
+
 var ErrNoSpecifyFile = errors.New("no file specified")
 
 type MemFileStorage struct {
 	*MemStorage
 	f           *os.File
 	isSyncStore bool
+}
+
+func NewMemFileStorage(filename string, storePerSeconds uint, neededRestore bool) (*MemFileStorage, error) {
+	storage := &MemFileStorage{
+		MemStorage: NewMemStorage(),
+		f:          nil,
+	}
+
+	if filename == "" {
+		return storage, nil
+	}
+
+	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		return nil, err
+	}
+	storage.f = file
+
+	if neededRestore {
+		err = storage.LoadMetricsFromFile()
+	} else {
+		err = storage.f.Truncate(0)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	storage.isSyncStore = storePerSeconds == 0
+	if !storage.isSyncStore {
+		go storage.startStoreMetricsPerSecondsTask(storePerSeconds)
+	}
+
+	return storage, nil
 }
 
 func (s *MemFileStorage) Add(metric *metrics.Metric) (*metrics.Metric, error) {
@@ -106,37 +141,4 @@ func (s *MemFileStorage) startStoreMetricsPerSecondsTask(secs uint) {
 			}
 		}
 	}
-}
-
-func NewMemFileStorage(filename string, storePerSeconds uint, neededRestore bool) (*MemFileStorage, error) {
-	storage := &MemFileStorage{
-		MemStorage: NewMemStorage(),
-		f:          nil,
-	}
-
-	if filename == "" {
-		return storage, nil
-	}
-
-	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0666)
-	if err != nil {
-		return nil, err
-	}
-	storage.f = file
-
-	if neededRestore {
-		err = storage.LoadMetricsFromFile()
-	} else {
-		err = storage.f.Truncate(0)
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	storage.isSyncStore = storePerSeconds == 0
-	if !storage.isSyncStore {
-		go storage.startStoreMetricsPerSecondsTask(storePerSeconds)
-	}
-
-	return storage, nil
 }
