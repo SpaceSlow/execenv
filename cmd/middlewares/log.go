@@ -11,14 +11,14 @@ import (
 
 var _ http.ResponseWriter = (*loggingResponseWriter)(nil)
 
-type Response struct {
+type response struct {
 	statusCode int
 	size       int
 }
 
 type loggingResponseWriter struct {
 	http.ResponseWriter
-	response *Response
+	response *response
 }
 
 func (l loggingResponseWriter) Write(bytes []byte) (int, error) {
@@ -33,13 +33,15 @@ func (l loggingResponseWriter) WriteHeader(statusCode int) {
 	l.ResponseWriter.WriteHeader(statusCode)
 }
 
+// WithLogging middleware предназначенная для логирования запросов пользователей.
+// В логи попадает следующая информация: uri, метод запроса, продолжительность обработки, статус ответа и размер ответа.
 func WithLogging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
 		l := loggingResponseWriter{
 			ResponseWriter: w,
-			response: &Response{
+			response: &response{
 				statusCode: 0,
 				size:       0,
 			},

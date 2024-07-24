@@ -14,6 +14,7 @@ import (
 	"github.com/shirou/gopsutil/mem"
 )
 
+// MetricWorkers служит для аккумуляции и отправки метрик на сервер, с заданным ключом.
 type MetricWorkers struct {
 	metricsForSend chan []Metric
 	errorsCh       chan error

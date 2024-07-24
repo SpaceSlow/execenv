@@ -8,6 +8,7 @@ import (
 	"github.com/SpaceSlow/execenv/cmd/storages"
 )
 
+// JSONMetricHandler хэндлер для обработки запросов в JSON-формате.
 type JSONMetricHandler struct {
 	MetricStorage storages.MetricStorage
 }

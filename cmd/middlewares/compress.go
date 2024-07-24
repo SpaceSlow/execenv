@@ -13,8 +13,10 @@ var (
 	_ io.ReadCloser       = (*compressReader)(nil)
 )
 
+// CompressionAlgorithm поддерживает алгоритм сжатия gzip.
 const CompressionAlgorithm = "gzip"
 
+// SupportedContentTypes представляет список поддерживаемых Content-Type для сжатия.
 var SupportedContentTypes = []string{"application/json", "text/html"}
 
 type compressResponseWriter struct {
@@ -73,6 +75,7 @@ func (c *compressReader) Close() error {
 	return c.zr.Close()
 }
 
+// WithCompressing middleware обрабатывает запросы с сжатыми данными (поддерживаемый алгоритм: CompressionAlgorithm).
 func WithCompressing(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		isContainsCompression := strings.Contains(r.Header.Get("Content-Encoding"), CompressionAlgorithm)

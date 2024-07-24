@@ -12,7 +12,7 @@ import (
 	"github.com/SpaceSlow/execenv/cmd/storages"
 )
 
-func runServer(middlewareHandlers ...func(next http.Handler) http.Handler) error {
+func RunServer(middlewareHandlers ...func(next http.Handler) http.Handler) error {
 	if err := logger.Initialize(zap.InfoLevel.String()); err != nil {
 		return err
 	}
@@ -49,7 +49,7 @@ func main() {
 		middlewares.WithCompressing,
 		middlewares.WithLogging,
 	}
-	if err := runServer(middlewareHandlers...); err != nil {
+	if err := RunServer(middlewareHandlers...); err != nil {
 		panic(err)
 	}
 }

@@ -14,6 +14,7 @@ import (
 
 var _ MetricStorage = (*DBStorage)(nil)
 
+// RetryDB является заместителем для sql.DB методов QueryRowContext и ExecContext, поддерживающие повторные запросы в случае неудач.
 type RetryDB struct {
 	*sql.DB
 	delays []time.Duration
@@ -67,6 +68,7 @@ func (db *RetryDB) ExecContext(ctx context.Context, query string, args ...any) (
 	return <-resultCh, err
 }
 
+// DBStorage хранит метрики в БД.
 type DBStorage struct {
 	ctx context.Context
 	db  RetryDB

@@ -19,6 +19,7 @@ type Config struct {
 	Delays        []time.Duration
 }
 
+// GetConfigWithFlags возвращает конфигурацию сервера на основании указанных флагов при запуске или указанных переменных окружения.
 func GetConfigWithFlags() (*Config, error) {
 	parseFlags()
 	cfg := &Config{}

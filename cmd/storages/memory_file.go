@@ -16,6 +16,7 @@ var _ MetricStorage = (*MemFileStorage)(nil)
 
 var ErrNoSpecifyFile = errors.New("no file specified")
 
+// MemFileStorage хранит метрики и в памяти и в файле, поддерживает синхронизацию памяти с файлом.
 type MemFileStorage struct {
 	*MemStorage
 	f           *os.File

@@ -7,6 +7,7 @@ const (
 	Gauge
 )
 
+// MetricType хранит тип метрики Counter и Gauge.
 type MetricType int
 
 func (mt MetricType) isValid() bool {
@@ -24,4 +25,16 @@ func (mt MetricType) String() string {
 	}
 
 	return metricTypes[mt-1]
+}
+
+// ParseMetricType возвращает тип метрики и ошибку, в случае невозможности разбора (поддерживает только lowercase).
+func ParseMetricType(mType string) (MetricType, error) {
+	switch mType {
+	case "counter":
+		return Counter, nil
+	case "gauge":
+		return Gauge, nil
+	default:
+		return MetricType(-1), ErrIncorrectMetricTypeOrValue
+	}
 }

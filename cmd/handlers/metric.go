@@ -11,6 +11,7 @@ import (
 	"github.com/SpaceSlow/execenv/cmd/storages"
 )
 
+// MetricHandler хэндлер для обработки запросов text/plain-формата.
 type MetricHandler struct {
 	MetricStorage storages.MetricStorage
 }

@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 )
 
+// KEY Секретный ключ для подписи в WithSigning(http.Handler) http.Handler.
 var KEY string
 
 func getHashBody(req *http.Request, key string) (string, error) {
@@ -24,6 +25,7 @@ func getHashBody(req *http.Request, key string) (string, error) {
 	return hex.EncodeToString(h.Sum([]byte(key))), nil
 }
 
+// WithSigning middleware предназначенная для подписи данных и проверки подписи.
 func WithSigning(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if headerHash := r.Header.Get("Hash"); headerHash != "none" && headerHash != "" && KEY != "" {

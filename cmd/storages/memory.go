@@ -8,6 +8,7 @@ import (
 
 var _ MetricStorage = (*MemStorage)(nil)
 
+// MemStorage хранит метрики в памяти (на основе map).
 type MemStorage struct {
 	mu       sync.Mutex
 	counters counters
