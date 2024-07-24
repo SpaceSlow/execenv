@@ -3,11 +3,12 @@ package execenv_test
 import (
 	"bytes"
 	"fmt"
-	"github.com/SpaceSlow/execenv/cmd/routers"
-	"github.com/SpaceSlow/execenv/cmd/storages"
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/SpaceSlow/execenv/cmd/routers"
+	"github.com/SpaceSlow/execenv/cmd/storages"
 )
 
 func Example() {
@@ -23,8 +24,16 @@ func Example() {
 	}()
 
 	// Отправляем на сервер метрики в формате "http://localhost:8080/update/{type}/{name}/{value}"
-	http.Post("http://localhost:8080/update/counter/foo/42", "text/plain", nil)
-	http.Post("http://localhost:8080/update/gauge/bar/42.42", "text/plain", nil)
+	res, err := http.Post("http://localhost:8080/update/counter/foo/42", "text/plain", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	res.Body.Close()
+	res, err = http.Post("http://localhost:8080/update/gauge/bar/42.42", "text/plain", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	res.Body.Close()
 
 	// Можно также отправить метрики на сервер batch-запросом в формате json
 	jsonMetric := []byte(`[
@@ -41,22 +50,18 @@ func Example() {
 	]`)
 	jsonMetricsReader := bytes.NewReader(jsonMetric)
 
-	_, err := http.Post("http://localhost:8080/updates/", "application/json", jsonMetricsReader)
+	res, err = http.Post("http://localhost:8080/updates/", "application/json", jsonMetricsReader)
 	if err != nil {
-		log.Println("json error", err)
+		log.Fatal(err)
 	}
+	res.Body.Close()
 
 	// Получим отправленные ранее метрики с сервера
 	response, err := http.Get("http://localhost:8080/")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}(response.Body)
+	defer response.Body.Close()
 
 	// Выведем полученные метрики
 	metrics, _ := io.ReadAll(response.Body)

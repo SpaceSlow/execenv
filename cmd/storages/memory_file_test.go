@@ -2,14 +2,16 @@ package storages
 
 import (
 	"encoding/json"
-	"github.com/SpaceSlow/execenv/cmd/metrics"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io"
 	"math"
 	"os"
 	"path"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/SpaceSlow/execenv/cmd/metrics"
 )
 
 func TestMemFileStorage_Add(t *testing.T) {
