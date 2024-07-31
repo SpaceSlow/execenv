@@ -14,16 +14,7 @@ import (
 	"github.com/shirou/gopsutil/mem"
 )
 
-func NewMetricWorkers(numWorkers int, url, key string, delays []time.Duration) *MetricWorkers {
-	return &MetricWorkers{
-		metricsForSend: make(chan []Metric, numWorkers),
-		errorsCh:       make(chan error, numWorkers),
-		url:            url,
-		key:            key,
-		delays:         delays,
-	}
-}
-
+// MetricWorkers служит для аккумуляции и отправки метрик на сервер, с заданным ключом.
 type MetricWorkers struct {
 	metricsForSend chan []Metric
 	errorsCh       chan error
@@ -33,6 +24,16 @@ type MetricWorkers struct {
 	key       string
 	delays    []time.Duration
 	pollCount atomic.Int64
+}
+
+func NewMetricWorkers(numWorkers int, url, key string, delays []time.Duration) *MetricWorkers {
+	return &MetricWorkers{
+		metricsForSend: make(chan []Metric, numWorkers),
+		errorsCh:       make(chan error, numWorkers),
+		url:            url,
+		key:            key,
+		delays:         delays,
+	}
 }
 
 func (mw *MetricWorkers) Send(metrics []Metric) {

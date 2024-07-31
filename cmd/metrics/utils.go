@@ -9,17 +9,8 @@ import (
 	"time"
 )
 
-func ParseMetricType(mType string) (MetricType, error) {
-	switch mType {
-	case "counter":
-		return Counter, nil
-	case "gauge":
-		return Gauge, nil
-	default:
-		return MetricType(-1), ErrIncorrectMetricTypeOrValue
-	}
-}
-
+// RetryFunc выполняет функцию f, в случае ошибки последовательно спустя промежутки delays пробует заново,
+// в случае неудачи всех попыток кладет в chan error последнюю полученную ошибку, при успехе nil.
 func RetryFunc(f func() error, delays []time.Duration) chan error {
 	errorCh := make(chan error)
 

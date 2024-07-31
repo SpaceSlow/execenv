@@ -6,17 +6,40 @@ import (
 	"strconv"
 )
 
-type Metric struct {
-	Type  MetricType
-	Name  string
-	Value interface{}
-}
+var (
+	_ json.Marshaler   = (*Metric)(nil)
+	_ json.Unmarshaler = (*Metric)(nil)
+	_ fmt.Stringer     = (*Metric)(nil)
+)
 
 type JSONMetric struct {
 	ID    string   `json:"id"`
 	MType string   `json:"type"`
 	Delta *int64   `json:"delta,omitempty"`
 	Value *float64 `json:"value,omitempty"`
+}
+
+type Metric struct {
+	Type  MetricType
+	Name  string
+	Value interface{}
+}
+
+func NewMetric(metricType MetricType, name, value string) (*Metric, error) {
+	var err error
+	var val interface{}
+	switch metricType {
+	case Counter:
+		val, err = strconv.ParseInt(value, 10, 64)
+	case Gauge:
+		val, err = strconv.ParseFloat(value, 64)
+	}
+
+	if err != nil {
+		return nil, ErrIncorrectMetricTypeOrValue
+	}
+
+	return &Metric{metricType, name, val}, nil
 }
 
 func (m *Metric) MarshalJSON() ([]byte, error) {
@@ -93,21 +116,4 @@ func (m *Metric) ValueAsString() string {
 func (m *Metric) Copy() *Metric {
 	metric, _ := NewMetric(m.Type, m.Name, m.ValueAsString())
 	return metric
-}
-
-func NewMetric(metricType MetricType, name, value string) (*Metric, error) {
-	var err error
-	var val interface{}
-	switch metricType {
-	case Counter:
-		val, err = strconv.ParseInt(value, 10, 64)
-	case Gauge:
-		val, err = strconv.ParseFloat(value, 64)
-	}
-
-	if err != nil {
-		return nil, ErrIncorrectMetricTypeOrValue
-	}
-
-	return &Metric{metricType, name, val}, nil
 }

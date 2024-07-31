@@ -3,8 +3,9 @@ package main
 import (
 	"time"
 
-	"github.com/SpaceSlow/execenv/cmd/flags"
 	"github.com/caarlos0/env"
+
+	"github.com/SpaceSlow/execenv/cmd/flags"
 )
 
 type Config struct {

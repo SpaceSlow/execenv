@@ -3,9 +3,10 @@ package storages
 import (
 	"testing"
 
-	"github.com/SpaceSlow/execenv/cmd/metrics"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/SpaceSlow/execenv/cmd/metrics"
 )
 
 func TestMemStorage_Add(t *testing.T) {
@@ -338,8 +339,8 @@ func TestMemStorage_List(t *testing.T) {
 
 func TestMemStorage_Batch(t *testing.T) {
 	type fields struct {
-		counters map[string]int64
-		gauges   map[string]float64
+		counters counters
+		gauges   gauges
 	}
 	type args struct {
 		metricSlice []metrics.Metric
@@ -348,38 +349,44 @@ func TestMemStorage_Batch(t *testing.T) {
 		name        string
 		fields      fields
 		args        args
-		wantMetrics []metrics.Metric
+		wantMetrics fields
 		wantErr     error
 	}{
 		{
 			name: "check update values after batch one gauge metric",
 			fields: fields{
-				counters: make(map[string]int64),
-				gauges:   map[string]float64{"RandomValue": float64(11.11)},
+				counters: make(counters),
+				gauges:   gauges{"RandomValue": float64(11.11)},
 			},
 			args: args{
 				metricSlice: []metrics.Metric{{Type: metrics.Gauge, Name: "RandomValue", Value: float64(55.55)}},
 			},
-			wantMetrics: []metrics.Metric{{Type: metrics.Gauge, Name: "RandomValue", Value: float64(55.55)}},
-			wantErr:     nil,
+			wantMetrics: fields{
+				counters: make(counters),
+				gauges:   gauges{"RandomValue": 55.55},
+			},
+			wantErr: nil,
 		},
 		{
 			name: "check summing deltas after batch one counter metric",
 			fields: fields{
-				counters: map[string]int64{"PollCount": 5},
-				gauges:   make(map[string]float64),
+				counters: counters{"PollCount": 5},
+				gauges:   make(gauges),
 			},
 			args: args{
 				metricSlice: []metrics.Metric{{Type: metrics.Counter, Name: "PollCount", Value: int64(50)}},
 			},
-			wantMetrics: []metrics.Metric{{Type: metrics.Counter, Name: "PollCount", Value: int64(55)}},
-			wantErr:     nil,
+			wantMetrics: fields{
+				counters: counters{"PollCount": 55},
+				gauges:   make(gauges),
+			},
+			wantErr: nil,
 		},
 		{
 			name: "check affect on existing metrics after batch more metrics",
 			fields: fields{
-				counters: map[string]int64{"PollCount": int64(5), "CounterMetric": int64(9)},
-				gauges:   map[string]float64{"RandomValue": float64(65), "RandomValue2": float64(10.001)},
+				counters: counters{"PollCount": 5, "CounterMetric": 9},
+				gauges:   gauges{"RandomValue": 65, "RandomValue2": 10.001},
 			},
 			args: args{
 				metricSlice: []metrics.Metric{
@@ -387,17 +394,17 @@ func TestMemStorage_Batch(t *testing.T) {
 					{Type: metrics.Gauge, Name: "RandomValue2", Value: float64(0.999)},
 				},
 			},
-			wantMetrics: []metrics.Metric{
-				{Type: metrics.Counter, Name: "PollCount", Value: int64(55)},
-				{Type: metrics.Gauge, Name: "RandomValue2", Value: float64(0.999)},
+			wantMetrics: fields{
+				counters: counters{"PollCount": 55, "CounterMetric": 9},
+				gauges:   gauges{"RandomValue2": 0.999, "RandomValue": 65},
 			},
 			wantErr: nil,
 		},
 		{
 			name: "check batch with incorrect metrics",
 			fields: fields{
-				counters: map[string]int64{"PollCount": int64(5), "CounterMetric": int64(9)},
-				gauges:   map[string]float64{"RandomValue": float64(65), "RandomValue2": float64(10.001)},
+				counters: counters{"PollCount": 5, "CounterMetric": 9},
+				gauges:   gauges{"RandomValue": 65, "RandomValue2": 10.001},
 			},
 			args: args{
 				metricSlice: []metrics.Metric{
@@ -405,8 +412,11 @@ func TestMemStorage_Batch(t *testing.T) {
 					{Type: metrics.Gauge, Name: "RandomValue2", Value: float64(0.999)},
 				},
 			},
-			wantMetrics: nil,
-			wantErr:     metrics.ErrIncorrectMetricTypeOrValue,
+			wantMetrics: fields{
+				counters: counters{"PollCount": 5, "CounterMetric": 9},
+				gauges:   gauges{"RandomValue": 65, "RandomValue2": 10.001},
+			},
+			wantErr: metrics.ErrIncorrectMetricTypeOrValue,
 		},
 	}
 	for _, tt := range tests {
@@ -415,9 +425,10 @@ func TestMemStorage_Batch(t *testing.T) {
 			storage.counters = tt.fields.counters
 			storage.gauges = tt.fields.gauges
 
-			metricSlice, err := storage.Batch(tt.args.metricSlice)
+			err := storage.Batch(tt.args.metricSlice)
 			require.Equal(t, tt.wantErr, err)
-			assert.ElementsMatch(t, tt.wantMetrics, metricSlice)
+			assert.Equal(t, tt.wantMetrics.counters, storage.counters)
+			assert.Equal(t, tt.wantMetrics.gauges, storage.gauges)
 		})
 	}
 }

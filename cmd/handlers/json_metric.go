@@ -8,6 +8,7 @@ import (
 	"github.com/SpaceSlow/execenv/cmd/storages"
 )
 
+// JSONMetricHandler хэндлер для обработки запросов в JSON-формате.
 type JSONMetricHandler struct {
 	MetricStorage storages.MetricStorage
 }
@@ -52,20 +53,13 @@ func (h JSONMetricHandler) BatchPost(res http.ResponseWriter, req *http.Request)
 	}
 
 	var err error
-	if metricSlice, err = h.MetricStorage.Batch(metricSlice); err != nil {
+	if err = h.MetricStorage.Batch(metricSlice); err != nil {
 		http.Error(res, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	metricsJSON, err := json.Marshal(metricSlice)
-	if err != nil {
-		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusOK)
-	res.Write(metricsJSON)
 }
 
 func (h JSONMetricHandler) Get(res http.ResponseWriter, req *http.Request) {
