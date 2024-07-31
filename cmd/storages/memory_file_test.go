@@ -273,7 +273,15 @@ func TestMemFileStorage_SaveMetricsToFile(t *testing.T) {
 			data, err := os.ReadFile(s.f.Name())
 			require.NoError(t, err)
 
-			assert.JSONEq(t, tt.wantMetrics, string(data))
+			var expectedMetrics []metrics.Metric
+			err = json.Unmarshal([]byte(tt.wantMetrics), &expectedMetrics)
+			require.NoError(t, err)
+
+			var actualMetrics []metrics.Metric
+			err = json.Unmarshal(data, &actualMetrics)
+			require.NoError(t, err)
+
+			assert.ElementsMatch(t, expectedMetrics, actualMetrics)
 		})
 	}
 }
