@@ -4,12 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"log"
 	"math/rand"
 	"testing"
 	"time"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/stretchr/testify/assert"
@@ -76,7 +76,19 @@ func (c *postgresContainer) Stop() error {
 	return c.pool.Purge(c.resource)
 }
 
-var storage *DBStorage
+type DBStorageWithDeleting struct {
+	*DBStorage
+}
+
+func NewDBStorageWithDeleting(storage *DBStorage) *DBStorageWithDeleting {
+	return &DBStorageWithDeleting{storage}
+}
+
+func (s DBStorageWithDeleting) DeleteMetrics() {
+	s.db.ExecContext(s.ctx, "DELETE FROM metrics")
+}
+
+var storage *DBStorageWithDeleting
 
 func TestMain(m *testing.M) {
 	container := newPostgresContainer()
@@ -90,11 +102,12 @@ func TestMain(m *testing.M) {
 			log.Fatalf("Could not stop postgres container: %s", err)
 		}
 	}(container)
-	storage, err = NewDBStorage(context.Background(), container.dsn, []time.Duration{time.Second})
+	s, err := NewDBStorage(context.Background(), container.dsn, []time.Duration{time.Second})
 	if err != nil {
 		log.Printf("Could not create DBStorage: %s", err)
 		return
 	}
+	storage = NewDBStorageWithDeleting(s)
 
 	if err := createMetricsTable(context.Background(), storage.db); err != nil {
 		log.Printf("Could not create metrics table: %s", err)
@@ -104,7 +117,7 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-func TestDBStorage_Add(t *testing.T) {
+func TestDBStorage_AddGet(t *testing.T) {
 	tests := []struct {
 		name       string
 		metric     *metrics.Metric
@@ -186,7 +199,72 @@ func TestDBStorage_Add(t *testing.T) {
 
 			stored, _ := storage.Get(tt.metric.Type, tt.metric.Name)
 			assert.ObjectsAreEqual(tt.wantMetric, stored)
+		})
+	}
+}
 
+func TestDBStorage_BatchList(t *testing.T) {
+	tests := []struct {
+		name        string
+		metricSlice []metrics.Metric
+		wantErr     error
+	}{
+		{
+			name: "batch one metric",
+			metricSlice: []metrics.Metric{
+				{
+					Type:  metrics.Gauge,
+					Name:  "GaugeMetric",
+					Value: 0.11,
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "batch several metrics",
+			metricSlice: []metrics.Metric{
+				{
+					Type:  metrics.Counter,
+					Name:  "PollCount",
+					Value: int64(5),
+				},
+				{
+					Type:  metrics.Gauge,
+					Name:  "RandomValue",
+					Value: 10.11,
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "batch metrics with incorrect type",
+			metricSlice: []metrics.Metric{
+				{
+					Type:  -1,
+					Name:  "PollCount",
+					Value: int64(15),
+				},
+				{
+					Type:  metrics.Gauge,
+					Name:  "RandomValue",
+					Value: 3.22,
+				},
+			},
+			wantErr: metrics.ErrIncorrectMetricTypeOrValue,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage.DeleteMetrics()
+			err := storage.Batch(tt.metricSlice)
+			assert.ErrorIs(t, err, tt.wantErr)
+
+			if err != nil {
+				return
+			}
+
+			actualMetrics := storage.List()
+			assert.ElementsMatch(t, tt.metricSlice, actualMetrics)
 		})
 	}
 }
