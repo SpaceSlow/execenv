@@ -22,7 +22,6 @@ type postgresContainer struct {
 	pool     *dockertest.Pool
 	resource *dockertest.Resource
 	dsn      string
-	db       *sql.DB
 }
 
 func newPostgresContainer() *postgresContainer {

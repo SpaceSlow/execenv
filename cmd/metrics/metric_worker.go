@@ -19,7 +19,6 @@ type MetricWorkers struct {
 	metricsForSend chan []Metric
 	errorsCh       chan error
 
-	metrics   []Metric
 	url       string
 	key       string
 	delays    []time.Duration
