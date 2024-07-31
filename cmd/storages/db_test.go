@@ -4,12 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"log"
 	"math/rand"
 	"testing"
 	"time"
 
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/stretchr/testify/assert"
@@ -78,10 +78,11 @@ func (c *postgresContainer) Stop() error {
 
 type DBStorageWithDeleting struct {
 	*DBStorage
+	dsn string
 }
 
-func NewDBStorageWithDeleting(storage *DBStorage) *DBStorageWithDeleting {
-	return &DBStorageWithDeleting{storage}
+func NewDBStorageWithDeleting(storage *DBStorage, dsn string) *DBStorageWithDeleting {
+	return &DBStorageWithDeleting{DBStorage: storage, dsn: dsn}
 }
 
 func (s DBStorageWithDeleting) DeleteMetrics() {
@@ -107,12 +108,7 @@ func TestMain(m *testing.M) {
 		log.Printf("Could not create DBStorage: %s", err)
 		return
 	}
-	storage = NewDBStorageWithDeleting(s)
-
-	if err := createMetricsTable(context.Background(), storage.db); err != nil {
-		log.Printf("Could not create metrics table: %s", err)
-		return
-	}
+	storage = NewDBStorageWithDeleting(s, container.dsn)
 
 	m.Run()
 }
@@ -267,6 +263,27 @@ func TestDBStorage_BatchList(t *testing.T) {
 			assert.ElementsMatch(t, tt.metricSlice, actualMetrics)
 		})
 	}
+}
+
+func TestDBStorage_CheckConnection(t *testing.T) {
+	assert.True(t, storage.CheckConnection())
+
+	require.NoError(t, storage.db.Close())
+	assert.False(t, storage.CheckConnection())
+
+	dbStorage, err := NewDBStorage(storage.ctx, storage.dsn, []time.Duration{time.Second})
+	require.NoError(t, err)
+
+	storage = NewDBStorageWithDeleting(dbStorage, storage.dsn)
+}
+
+func TestDBStorage_Close(t *testing.T) {
+	assert.NoError(t, storage.Close())
+
+	dbStorage, err := NewDBStorage(storage.ctx, storage.dsn, []time.Duration{time.Second})
+	require.NoError(t, err)
+
+	storage = NewDBStorageWithDeleting(dbStorage, storage.dsn)
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
