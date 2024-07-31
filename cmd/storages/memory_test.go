@@ -432,3 +432,8 @@ func TestMemStorage_Batch(t *testing.T) {
 		})
 	}
 }
+
+func TestMemStorage_Close(t *testing.T) {
+	storage := NewMemStorage()
+	assert.Nil(t, storage.Close())
+}
