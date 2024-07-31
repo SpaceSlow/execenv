@@ -20,8 +20,8 @@ type Config struct {
 }
 
 // GetConfigWithFlags возвращает конфигурацию сервера на основании указанных флагов при запуске или указанных переменных окружения.
-func GetConfigWithFlags() (*Config, error) {
-	parseFlags()
+func GetConfigWithFlags(programName string, args []string) (*Config, error) {
+	parseFlags(programName, args)
 	cfg := &Config{}
 
 	if err := env.Parse(cfg); err != nil {

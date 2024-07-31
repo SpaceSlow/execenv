@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	cfg, err := GetConfigWithFlags()
+	cfg, err := GetConfigWithFlags(os.Args[0], os.Args[1:])
 
 	if err != nil {
 		panic(err)

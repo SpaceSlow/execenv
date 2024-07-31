@@ -17,8 +17,8 @@ type Config struct {
 	Delays         []time.Duration
 }
 
-func GetConfigWithFlags() (*Config, error) {
-	parseFlags()
+func GetConfigWithFlags(programName string, args []string) (*Config, error) {
+	parseFlags(programName, args)
 	cfg := &Config{}
 
 	if err := env.Parse(cfg); err != nil {

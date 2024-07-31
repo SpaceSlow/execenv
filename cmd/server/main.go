@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"net/http"
+	"os"
 
 	"go.uber.org/zap"
 
@@ -17,7 +18,7 @@ func RunServer(middlewareHandlers ...func(next http.Handler) http.Handler) error
 		return err
 	}
 
-	cfg, err := GetConfigWithFlags()
+	cfg, err := GetConfigWithFlags(os.Args[0], os.Args[1:])
 	if err != nil {
 		return err
 	}
