@@ -172,6 +172,16 @@ func TestMemFileStorage_Batch(t *testing.T) {
 	}
 }
 
+func TestMemFileStorage_Close(t *testing.T) {
+	s, err := NewMemFileStorage(path.Join(os.TempDir(), randStringBytes(10)), 0, false)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, os.Remove(s.f.Name()))
+	}()
+
+	assert.NoError(t, s.Close())
+}
+
 func TestMemFileStorage_LoadMetricsFromFile(t *testing.T) {
 	type wantMetrics struct {
 		counters counters
