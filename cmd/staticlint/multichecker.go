@@ -1,4 +1,4 @@
-package staticlint
+package main
 
 import (
 	"strings"
@@ -55,6 +55,8 @@ import (
 	"honnef.co/go/tools/analysis/facts/directives"
 	"honnef.co/go/tools/analysis/facts/nilness"
 	"honnef.co/go/tools/staticcheck"
+
+	"github.com/SpaceSlow/execenv/cmd/staticlint/exitcheck"
 )
 
 func main() {
@@ -118,6 +120,7 @@ func main() {
 
 	checks := append(saAnalyzers, passesAnalyzers...)
 	checks = append(checks, errwrap.Analyzer)
+	checks = append(checks, exitcheck.Analyzer)
 
 	multichecker.Main(
 		checks...,
