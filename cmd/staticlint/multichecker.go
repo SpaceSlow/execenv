@@ -3,6 +3,7 @@ package staticlint
 import (
 	"strings"
 
+	"github.com/fatih/errwrap/errwrap"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/multichecker"
 	"golang.org/x/tools/go/analysis/passes/appends"
@@ -116,6 +117,7 @@ func main() {
 	}
 
 	checks := append(saAnalyzers, passesAnalyzers...)
+	checks = append(checks, errwrap.Analyzer)
 
 	multichecker.Main(
 		checks...,
