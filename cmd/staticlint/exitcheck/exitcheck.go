@@ -2,6 +2,7 @@ package exitcheck
 
 import (
 	"go/ast"
+
 	"golang.org/x/tools/go/analysis"
 )
 
@@ -40,7 +41,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 						if f, ok := node.X.(*ast.CallExpr); ok {
 							if ident, ok := f.Fun.(*ast.SelectorExpr); ok {
 								if i, ok := ident.X.(*ast.Ident); ok && i.Name == "os" && ident.Sel.Name == "Exit" {
-									pass.Reportf(f.Pos(), "calling os.Exit() in main() function")
+									pass.Reportf(i.NamePos, "calling os.Exit func in main func")
 								}
 							}
 						}
