@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/fatih/errwrap/errwrap"
+	"github.com/gordonklaus/ineffassign/pkg/ineffassign"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/multichecker"
 	"golang.org/x/tools/go/analysis/passes/appends"
@@ -52,18 +53,18 @@ import (
 	"golang.org/x/tools/go/analysis/passes/usesgenerics"
 	"honnef.co/go/tools/analysis/facts/directives"
 	"honnef.co/go/tools/analysis/facts/nilness"
+	"honnef.co/go/tools/quickfix"
+	"honnef.co/go/tools/simple"
 	"honnef.co/go/tools/staticcheck"
+	"honnef.co/go/tools/stylecheck"
 
 	"github.com/SpaceSlow/execenv/cmd/staticlint/exitcheck"
 )
 
 func main() {
-	staticcheckAnalyzers := make([]*analysis.Analyzer, 0, len(staticcheck.Analyzers))
-	for _, v := range staticcheck.Analyzers {
-		staticcheckAnalyzers = append(staticcheckAnalyzers, v.Analyzer)
-	}
 
-	var goAnalysisPassesAnalyzers = []*analysis.Analyzer{
+	var checks = []*analysis.Analyzer{
+		// go/analysis/passes analyzers
 		appends.Analyzer,
 		asmdecl.Analyzer,
 		assign.Analyzer,
@@ -112,11 +113,38 @@ func main() {
 		unusedresult.Analyzer,
 		unusedwrite.Analyzer,
 		usesgenerics.Analyzer,
+
+		// external public analyzers
+		errwrap.Analyzer,
+		ineffassign.Analyzer,
+
+		// custom analyzer
+		exitcheck.Analyzer,
 	}
 
-	checks := append(staticcheckAnalyzers, goAnalysisPassesAnalyzers...)
-	checks = append(checks, errwrap.Analyzer)
-	checks = append(checks, exitcheck.Analyzer)
+	// staticcheck analyzers (SA***)
+	for _, v := range staticcheck.Analyzers {
+		checks = append(checks, v.Analyzer)
+	}
+
+	// simple analyzers (S***)
+	for _, v := range simple.Analyzers {
+		checks = append(checks, v.Analyzer)
+	}
+
+	// stylecheck analyzers (ST***)
+	for _, v := range stylecheck.Analyzers {
+		if v.Analyzer.Name == "ST1005" {
+			checks = append(checks, v.Analyzer)
+		}
+	}
+
+	// quickfix analyzer
+	for _, v := range quickfix.Analyzers {
+		if v.Analyzer.Name == "QF1006" {
+			checks = append(checks, v.Analyzer)
+		}
+	}
 
 	multichecker.Main(
 		checks...,
