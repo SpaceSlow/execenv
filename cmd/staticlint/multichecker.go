@@ -1,8 +1,6 @@
 package main
 
 import (
-	"strings"
-
 	"github.com/fatih/errwrap/errwrap"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/multichecker"
@@ -60,14 +58,12 @@ import (
 )
 
 func main() {
-	var saAnalyzers []*analysis.Analyzer
+	staticcheckAnalyzers := make([]*analysis.Analyzer, 0, len(staticcheck.Analyzers))
 	for _, v := range staticcheck.Analyzers {
-		if strings.HasPrefix(v.Analyzer.Name, "SA") {
-			saAnalyzers = append(saAnalyzers, v.Analyzer)
-		}
+		staticcheckAnalyzers = append(staticcheckAnalyzers, v.Analyzer)
 	}
 
-	var passesAnalyzers = []*analysis.Analyzer{
+	var goAnalysisPassesAnalyzers = []*analysis.Analyzer{
 		appends.Analyzer,
 		asmdecl.Analyzer,
 		assign.Analyzer,
@@ -118,7 +114,7 @@ func main() {
 		usesgenerics.Analyzer,
 	}
 
-	checks := append(saAnalyzers, passesAnalyzers...)
+	checks := append(staticcheckAnalyzers, goAnalysisPassesAnalyzers...)
 	checks = append(checks, errwrap.Analyzer)
 	checks = append(checks, exitcheck.Analyzer)
 
