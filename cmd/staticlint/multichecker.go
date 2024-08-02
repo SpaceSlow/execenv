@@ -1,3 +1,5 @@
+// Запуск сборки и статического анализа:
+// `cd cmd/staticlint && go build -o staticlint . && cd ../.. && cmd/staticlint/staticlint ./...`
 package main
 
 import (
