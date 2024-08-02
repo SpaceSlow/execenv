@@ -114,7 +114,7 @@ func (s DBStorage) Add(metric *metrics.Metric) (*metrics.Metric, error) {
 	case metrics.Counter:
 		row := s.db.QueryRowContext(s.ctx, "SELECT delta FROM metrics WHERE (name=$1 AND is_gauge=FALSE) LIMIT 1;", metric.Name)
 		var prevValue int64
-		err := row.Scan(&prevValue)
+		err = row.Scan(&prevValue)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return nil, err
 		}

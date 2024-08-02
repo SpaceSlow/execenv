@@ -32,12 +32,12 @@ func (c *postgresContainer) Start() error {
 	var err error
 	c.pool, err = dockertest.NewPool("")
 	if err != nil {
-		return fmt.Errorf("could not construct pool: %s", err)
+		return fmt.Errorf("could not construct pool: %w", err)
 	}
 
 	err = c.pool.Client.Ping()
 	if err != nil {
-		return fmt.Errorf("could not connect to Docker: %s", err)
+		return fmt.Errorf("could not connect to Docker: %w", err)
 	}
 
 	c.resource, err = c.pool.RunWithOptions(&dockertest.RunOptions{
@@ -55,7 +55,7 @@ func (c *postgresContainer) Start() error {
 		}
 	})
 	if err != nil {
-		return fmt.Errorf("could not start resource: %s", err)
+		return fmt.Errorf("could not start resource: %w", err)
 	}
 
 	c.dsn = fmt.Sprintf("postgres://test:test@localhost:%s/test?sslmode=disable", c.resource.GetPort("5432/tcp"))
@@ -67,7 +67,7 @@ func (c *postgresContainer) Start() error {
 		}
 		return db.Ping()
 	}); err != nil {
-		return fmt.Errorf("could not connect to database: %s", err)
+		return fmt.Errorf("could not connect to database: %w", err)
 	}
 	return nil
 }
@@ -98,7 +98,7 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Could not start postgres container: %s", err)
 	}
 	defer func(container *postgresContainer) {
-		err := container.Stop()
+		err = container.Stop()
 		if err != nil {
 			log.Fatalf("Could not stop postgres container: %s", err)
 		}
