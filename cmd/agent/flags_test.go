@@ -9,11 +9,11 @@ import (
 )
 
 type wantFlags struct {
+	Key            string
 	ServerAddr     flags.NetAddress
 	ReportInterval int
 	PollInterval   int
 	RateLimit      int
-	Key            string
 }
 
 var standardFlags = wantFlags{
@@ -29,8 +29,8 @@ var standardFlags = wantFlags{
 
 func Test_parseFlags(t *testing.T) {
 	tests := []struct {
-		name      string
 		args      []string
+		name      string
 		wantFlags wantFlags
 	}{
 		{

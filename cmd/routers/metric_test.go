@@ -22,8 +22,8 @@ type fields struct {
 }
 
 type want struct {
-	statusCode int
 	body       string
+	statusCode int
 }
 
 type testCase struct {

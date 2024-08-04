@@ -115,10 +115,10 @@ func TestMain(m *testing.M) {
 
 func TestDBStorage_AddGet(t *testing.T) {
 	tests := []struct {
-		name       string
 		metric     *metrics.Metric
 		wantMetric *metrics.Metric
 		wantErr    error
+		name       string
 	}{
 		{
 			name: "adding counter metric",
@@ -201,9 +201,9 @@ func TestDBStorage_AddGet(t *testing.T) {
 
 func TestDBStorage_BatchList(t *testing.T) {
 	tests := []struct {
+		wantErr     error
 		name        string
 		metricSlice []metrics.Metric
-		wantErr     error
 	}{
 		{
 			name: "batch one metric",

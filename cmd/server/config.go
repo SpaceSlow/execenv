@@ -10,13 +10,13 @@ import (
 )
 
 type Config struct {
+	StoragePath   string `env:"FILE_STORAGE_PATH"`
+	DatabaseDSN   string `env:"DATABASE_DSN"`
+	Key           string `env:"KEY"`
+	Delays        []time.Duration
 	ServerAddr    flags.NetAddress `env:"ADDRESS"`
 	StoreInterval uint             `env:"STORE_INTERVAL"`
-	StoragePath   string           `env:"FILE_STORAGE_PATH"`
 	NeededRestore bool             `env:"RESTORE"`
-	DatabaseDSN   string           `env:"DATABASE_DSN"`
-	Key           string           `env:"KEY"`
-	Delays        []time.Duration
 }
 
 // GetConfigWithFlags возвращает конфигурацию сервера на основании указанных флагов при запуске или указанных переменных окружения.

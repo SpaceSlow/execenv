@@ -16,9 +16,9 @@ import (
 
 func TestMemFileStorage_Add(t *testing.T) {
 	tests := []struct {
-		name    string
-		metric  *metrics.Metric
 		wantErr error
+		metric  *metrics.Metric
+		name    string
 	}{
 		{
 			name: "check adding correct metric",
@@ -75,11 +75,11 @@ func TestMemFileStorage_Batch(t *testing.T) {
 		metricSlice []metrics.Metric
 	}
 	tests := []struct {
+		wantErr     error
 		name        string
 		fields      fields
 		args        args
 		wantMetrics []metrics.Metric
-		wantErr     error
 	}{
 		{
 			name: "check update values after batch one gauge metric",
@@ -189,9 +189,9 @@ func TestMemFileStorage_LoadMetricsFromFile(t *testing.T) {
 	}
 	tests := []struct {
 		name        string
-		data        []byte
 		wantMetrics wantMetrics
 		wantErr     error
+		data        []byte
 	}{
 		{
 			name:        "loading one metric from file",
@@ -246,10 +246,10 @@ func TestMemFileStorage_SaveMetricsToFile(t *testing.T) {
 		gauges   gauges
 	}
 	tests := []struct {
-		name        string
 		fields      fields
-		wantMetrics string
 		wantErr     error
+		name        string
+		wantMetrics string
 	}{
 		{
 			name: "check saving metrics to file",

@@ -9,12 +9,12 @@ import (
 )
 
 type Config struct {
-	ServerAddr     flags.NetAddress `env:"ADDRESS"`
-	ReportInterval int              `env:"REPORT_INTERVAL"`
-	PollInterval   int              `env:"POLL_INTERVAL"`
 	Key            string           `env:"KEY"`
-	RateLimit      int              `env:"RATE_LIMIT"`
+	ServerAddr     flags.NetAddress `env:"ADDRESS"`
 	Delays         []time.Duration
+	ReportInterval int `env:"REPORT_INTERVAL"`
+	PollInterval   int `env:"POLL_INTERVAL"`
+	RateLimit      int `env:"RATE_LIMIT"`
 }
 
 func GetConfigWithFlags(programName string, args []string) (*Config, error) {

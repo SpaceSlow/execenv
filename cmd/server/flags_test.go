@@ -9,12 +9,12 @@ import (
 )
 
 type wantFlags struct {
-	RunAddr       flags.NetAddress
-	StoreInterval uint
 	StoragePath   string
-	NeedRestore   bool
 	DatabaseDSN   string
 	Key           string
+	RunAddr       flags.NetAddress
+	StoreInterval uint
+	NeedRestore   bool
 }
 
 var standardFlags = wantFlags{
