@@ -359,15 +359,16 @@ func TestMetricRouter(t *testing.T) {
 
 			assert.Equal(t, test.want.statusCode, res.StatusCode)
 
-			if test.want.body != "" {
-				body, err := io.ReadAll(res.Body)
-				require.NoError(t, res.Body.Close())
-				require.NoError(t, err)
-				if test.want.bodyJSON != "" {
-					assert.JSONEq(t, test.want.bodyJSON, string(body))
-				} else {
-					assert.Equal(t, test.want.body, string(body))
-				}
+			if test.want.body == "" {
+				return
+			}
+			body, err := io.ReadAll(res.Body)
+			require.NoError(t, res.Body.Close())
+			require.NoError(t, err)
+			if test.want.bodyJSON != "" {
+				assert.JSONEq(t, test.want.bodyJSON, string(body))
+			} else {
+				assert.Equal(t, test.want.body, string(body))
 			}
 		})
 	}
