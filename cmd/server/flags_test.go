@@ -121,7 +121,7 @@ func Test_parseFlags(t *testing.T) {
 			},
 		},
 		{
-			name: "checking database dsn flag",
+			name: "checking setting non-empty key flag",
 			args: []string{
 				"-k=non-standard-key",
 			},
