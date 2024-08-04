@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -12,6 +13,28 @@ import (
 	"github.com/SpaceSlow/execenv/cmd/routers"
 	"github.com/SpaceSlow/execenv/cmd/storages"
 )
+
+var (
+	buildVersion string
+	buildDate    string
+	buildCommit  string
+)
+
+func printBuildInfo() {
+	if buildVersion == "" {
+		buildVersion = "N/A"
+	}
+	if buildDate == "" {
+		buildDate = "N/A"
+	}
+	if buildCommit == "" {
+		buildCommit = "N/A"
+	}
+
+	fmt.Println("Build version:", buildVersion)
+	fmt.Println("Build date:", buildDate)
+	fmt.Println("Build commit:", buildCommit)
+}
 
 func RunServer(middlewareHandlers ...func(next http.Handler) http.Handler) error {
 	if err := logger.Initialize(zap.InfoLevel.String()); err != nil {
@@ -45,6 +68,7 @@ func RunServer(middlewareHandlers ...func(next http.Handler) http.Handler) error
 }
 
 func main() {
+	printBuildInfo()
 	middlewareHandlers := []func(next http.Handler) http.Handler{
 		middlewares.WithSigning,
 		middlewares.WithCompressing,
