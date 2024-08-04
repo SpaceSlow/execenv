@@ -5,12 +5,12 @@ import (
 
 	"github.com/caarlos0/env"
 
-	"github.com/SpaceSlow/execenv/cmd/flags"
+	"github.com/SpaceSlow/execenv/cmd/config"
 )
 
 type Config struct {
-	Key            string           `env:"KEY"`
-	ServerAddr     flags.NetAddress `env:"ADDRESS"`
+	Key            string            `env:"KEY"`
+	ServerAddr     config.NetAddress `env:"ADDRESS"`
 	Delays         []time.Duration
 	ReportInterval int `env:"REPORT_INTERVAL"`
 	PollInterval   int `env:"POLL_INTERVAL"`

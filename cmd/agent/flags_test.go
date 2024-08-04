@@ -5,19 +5,19 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/SpaceSlow/execenv/cmd/flags"
+	"github.com/SpaceSlow/execenv/cmd/config"
 )
 
 type wantFlags struct {
 	Key            string
-	ServerAddr     flags.NetAddress
+	ServerAddr     config.NetAddress
 	ReportInterval int
 	PollInterval   int
 	RateLimit      int
 }
 
 var standardFlags = wantFlags{
-	ServerAddr: flags.NetAddress{
+	ServerAddr: config.NetAddress{
 		Host: "localhost",
 		Port: 8080,
 	},
@@ -50,7 +50,7 @@ func Test_parseFlags(t *testing.T) {
 				"-a=:8081",
 			},
 			wantFlags: wantFlags{
-				ServerAddr: flags.NetAddress{
+				ServerAddr: config.NetAddress{
 					Host: "",
 					Port: 8081,
 				},
@@ -122,7 +122,7 @@ func Test_parseFlags(t *testing.T) {
 				"-k=non-standard-key",
 			},
 			wantFlags: wantFlags{
-				ServerAddr: flags.NetAddress{
+				ServerAddr: config.NetAddress{
 					Host: "example.com",
 					Port: 80,
 				},

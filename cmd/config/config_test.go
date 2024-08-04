@@ -1,29 +1,29 @@
-package main
+package config
 
 import (
-	"github.com/SpaceSlow/execenv/cmd/flags"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetConfigWithFlags(t *testing.T) {
 	tests := []struct {
-		err   error
-		want  *Config
-		name  string
-		envs  map[string]string
-		flags []string
+		wantErr bool
+		want    *Config
+		flags   []string
+		envs    map[string]string
+		name    string
 	}{
 		{
 			name: "standard config",
-			want: &DefaultConfig,
+			want: defaultConfig,
 		},
 		{
 			name: "incorrect server address in envs",
 			envs: map[string]string{
 				"ADDRESS": ":-1",
 			},
-			err: flags.ErrIncorrectPort,
+			wantErr: true,
 		},
 		{
 			name: "env priority on flags",
@@ -40,8 +40,8 @@ func TestGetConfigWithFlags(t *testing.T) {
 				StoragePath:   "/tmp/env",
 				DatabaseDSN:   "postgres://env:env@localhost:5432/env",
 				Key:           "env",
-				Delays:        DefaultConfig.Delays,
-				ServerAddr:    flags.NetAddress{Host: "", Port: 9090},
+				Delays:        defaultConfig.Delays,
+				ServerAddr:    NetAddress{Host: "", Port: 9090},
 				StoreInterval: 100,
 				NeededRestore: false,
 			},
@@ -53,8 +53,8 @@ func TestGetConfigWithFlags(t *testing.T) {
 				t.Setenv(k, v)
 			}
 
-			got, err := GetConfigWithFlags("program", tt.flags)
-			assert.Equal(t, err, tt.err)
+			got, err := getConfigWithFlags("program", tt.flags)
+			assert.Equal(t, tt.wantErr, err != nil)
 			assert.Equal(t, tt.want, got)
 		})
 	}

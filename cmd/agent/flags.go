@@ -3,11 +3,11 @@ package main
 import (
 	"flag"
 
-	"github.com/SpaceSlow/execenv/cmd/flags"
+	"github.com/SpaceSlow/execenv/cmd/config"
 )
 
 var (
-	flagServerAddr     flags.NetAddress
+	flagServerAddr     config.NetAddress
 	flagReportInterval int
 	flagPollInterval   int
 	flagKey            string
@@ -17,7 +17,7 @@ var (
 func parseFlags(programName string, args []string) {
 	flagSet := flag.NewFlagSet(programName, flag.ContinueOnError)
 
-	flagServerAddr = flags.NetAddress{Host: "localhost", Port: 8080}
+	flagServerAddr = config.NetAddress{Host: "localhost", Port: 8080}
 	flagSet.Var(&flagServerAddr, "a", "address and port server")
 	flagSet.IntVar(&flagReportInterval, "r", 10, "interval in seconds of sending metrics to server")
 	flagSet.IntVar(&flagPollInterval, "p", 2, "interval in seconds of polling metrics")

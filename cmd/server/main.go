@@ -3,11 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"os"
-
 	"go.uber.org/zap"
+	"net/http"
 
+	"github.com/SpaceSlow/execenv/cmd/config"
 	"github.com/SpaceSlow/execenv/cmd/logger"
 	"github.com/SpaceSlow/execenv/cmd/middlewares"
 	"github.com/SpaceSlow/execenv/cmd/routers"
@@ -41,12 +40,10 @@ func RunServer(middlewareHandlers ...func(next http.Handler) http.Handler) error
 		return err
 	}
 
-	cfg, err := GetConfigWithFlags(os.Args[0], os.Args[1:])
-	if err != nil {
-		return err
-	}
+	cfg := config.GetConfig()
 
 	var storage storages.MetricStorage
+	var err error
 	if cfg.DatabaseDSN != "" {
 		storage, err = storages.NewDBStorage(context.Background(), cfg.DatabaseDSN, cfg.Delays)
 		logger.Log.Info("using storage DB", zap.String("DSN", cfg.DatabaseDSN))
@@ -57,7 +54,6 @@ func RunServer(middlewareHandlers ...func(next http.Handler) http.Handler) error
 		return err
 	}
 	defer storage.Close()
-	middlewares.KEY = cfg.Key
 
 	mux := routers.MetricRouter(storage).(http.Handler)
 	for _, middleware := range middlewareHandlers {

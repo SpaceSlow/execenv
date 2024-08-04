@@ -1,18 +1,16 @@
-package main
+package config
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/SpaceSlow/execenv/cmd/flags"
 )
 
 type wantFlags struct {
 	StoragePath   string
 	DatabaseDSN   string
 	Key           string
-	ServerAddr    flags.NetAddress
+	ServerAddr    NetAddress
 	StoreInterval uint
 	NeededRestore bool
 }
@@ -27,12 +25,12 @@ func Test_parseFlags(t *testing.T) {
 			name: "standard flag values",
 			args: nil,
 			wantFlags: wantFlags{
-				ServerAddr:    DefaultConfig.ServerAddr,
-				StoreInterval: DefaultConfig.StoreInterval,
-				StoragePath:   DefaultConfig.StoragePath,
-				NeededRestore: DefaultConfig.NeededRestore,
-				DatabaseDSN:   DefaultConfig.DatabaseDSN,
-				Key:           DefaultConfig.Key,
+				ServerAddr:    defaultConfig.ServerAddr,
+				StoreInterval: defaultConfig.StoreInterval,
+				StoragePath:   defaultConfig.StoragePath,
+				NeededRestore: defaultConfig.NeededRestore,
+				DatabaseDSN:   defaultConfig.DatabaseDSN,
+				Key:           defaultConfig.Key,
 			},
 		},
 		{
@@ -41,15 +39,15 @@ func Test_parseFlags(t *testing.T) {
 				"-a=:8081",
 			},
 			wantFlags: wantFlags{
-				ServerAddr: flags.NetAddress{
+				ServerAddr: NetAddress{
 					Host: "",
 					Port: 8081,
 				},
-				StoreInterval: DefaultConfig.StoreInterval,
-				StoragePath:   DefaultConfig.StoragePath,
-				NeededRestore: DefaultConfig.NeededRestore,
-				DatabaseDSN:   DefaultConfig.DatabaseDSN,
-				Key:           DefaultConfig.Key,
+				StoreInterval: defaultConfig.StoreInterval,
+				StoragePath:   defaultConfig.StoragePath,
+				NeededRestore: defaultConfig.NeededRestore,
+				DatabaseDSN:   defaultConfig.DatabaseDSN,
+				Key:           defaultConfig.Key,
 			},
 		},
 		{
@@ -58,12 +56,12 @@ func Test_parseFlags(t *testing.T) {
 				"-i=0",
 			},
 			wantFlags: wantFlags{
-				ServerAddr:    DefaultConfig.ServerAddr,
+				ServerAddr:    defaultConfig.ServerAddr,
 				StoreInterval: 0,
-				StoragePath:   DefaultConfig.StoragePath,
-				NeededRestore: DefaultConfig.NeededRestore,
-				DatabaseDSN:   DefaultConfig.DatabaseDSN,
-				Key:           DefaultConfig.Key,
+				StoragePath:   defaultConfig.StoragePath,
+				NeededRestore: defaultConfig.NeededRestore,
+				DatabaseDSN:   defaultConfig.DatabaseDSN,
+				Key:           defaultConfig.Key,
 			},
 		},
 		{
@@ -72,12 +70,12 @@ func Test_parseFlags(t *testing.T) {
 				"-f=/tmp/file",
 			},
 			wantFlags: wantFlags{
-				ServerAddr:    DefaultConfig.ServerAddr,
-				StoreInterval: DefaultConfig.StoreInterval,
+				ServerAddr:    defaultConfig.ServerAddr,
+				StoreInterval: defaultConfig.StoreInterval,
 				StoragePath:   "/tmp/file",
-				NeededRestore: DefaultConfig.NeededRestore,
-				DatabaseDSN:   DefaultConfig.DatabaseDSN,
-				Key:           DefaultConfig.Key,
+				NeededRestore: defaultConfig.NeededRestore,
+				DatabaseDSN:   defaultConfig.DatabaseDSN,
+				Key:           defaultConfig.Key,
 			},
 		},
 		{
@@ -86,12 +84,12 @@ func Test_parseFlags(t *testing.T) {
 				"-r",
 			},
 			wantFlags: wantFlags{
-				ServerAddr:    DefaultConfig.ServerAddr,
-				StoreInterval: DefaultConfig.StoreInterval,
-				StoragePath:   DefaultConfig.StoragePath,
+				ServerAddr:    defaultConfig.ServerAddr,
+				StoreInterval: defaultConfig.StoreInterval,
+				StoragePath:   defaultConfig.StoragePath,
 				NeededRestore: true,
-				DatabaseDSN:   DefaultConfig.DatabaseDSN,
-				Key:           DefaultConfig.Key,
+				DatabaseDSN:   defaultConfig.DatabaseDSN,
+				Key:           defaultConfig.Key,
 			},
 		},
 		{
@@ -100,12 +98,12 @@ func Test_parseFlags(t *testing.T) {
 				"-d=postgres://username:password@localhost:5432/database_name",
 			},
 			wantFlags: wantFlags{
-				ServerAddr:    DefaultConfig.ServerAddr,
-				StoreInterval: DefaultConfig.StoreInterval,
-				StoragePath:   DefaultConfig.StoragePath,
-				NeededRestore: DefaultConfig.NeededRestore,
+				ServerAddr:    defaultConfig.ServerAddr,
+				StoreInterval: defaultConfig.StoreInterval,
+				StoragePath:   defaultConfig.StoragePath,
+				NeededRestore: defaultConfig.NeededRestore,
 				DatabaseDSN:   "postgres://username:password@localhost:5432/database_name",
-				Key:           DefaultConfig.Key,
+				Key:           defaultConfig.Key,
 			},
 		},
 		{
@@ -114,11 +112,11 @@ func Test_parseFlags(t *testing.T) {
 				"-k=non-standard-key",
 			},
 			wantFlags: wantFlags{
-				ServerAddr:    DefaultConfig.ServerAddr,
-				StoreInterval: DefaultConfig.StoreInterval,
-				StoragePath:   DefaultConfig.StoragePath,
-				NeededRestore: DefaultConfig.NeededRestore,
-				DatabaseDSN:   DefaultConfig.DatabaseDSN,
+				ServerAddr:    defaultConfig.ServerAddr,
+				StoreInterval: defaultConfig.StoreInterval,
+				StoragePath:   defaultConfig.StoragePath,
+				NeededRestore: defaultConfig.NeededRestore,
+				DatabaseDSN:   defaultConfig.DatabaseDSN,
 				Key:           "non-standard-key",
 			},
 		},
@@ -133,7 +131,7 @@ func Test_parseFlags(t *testing.T) {
 				"-d=postgres://username:password@localhost:5432/database_name",
 			},
 			wantFlags: wantFlags{
-				ServerAddr: flags.NetAddress{
+				ServerAddr: NetAddress{
 					Host: "example.com",
 					Port: 80,
 				},

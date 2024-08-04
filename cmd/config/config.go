@@ -1,16 +1,16 @@
-package main
+package config
 
 import (
+	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/caarlos0/env"
-
-	"github.com/SpaceSlow/execenv/cmd/flags"
 )
 
-var DefaultConfig = Config{
-	ServerAddr: flags.NetAddress{
+var defaultConfig = &Config{
+	ServerAddr: NetAddress{
 		Host: "localhost",
 		Port: 8080,
 	},
@@ -27,21 +27,31 @@ type Config struct {
 	DatabaseDSN   string `env:"DATABASE_DSN"`
 	Key           string `env:"KEY"`
 	Delays        []time.Duration
-	ServerAddr    flags.NetAddress `env:"ADDRESS"`
-	StoreInterval uint             `env:"STORE_INTERVAL"`
-	NeededRestore bool             `env:"RESTORE"`
+	ServerAddr    NetAddress `env:"ADDRESS"`
+	StoreInterval uint       `env:"STORE_INTERVAL"`
+	NeededRestore bool       `env:"RESTORE"`
 }
 
-// GetConfigWithFlags возвращает конфигурацию сервера на основании указанных флагов при запуске или указанных переменных окружения.
-func GetConfigWithFlags(programName string, args []string) (*Config, error) {
+var userConfig *Config = nil
+
+// GetConfig возвращает конфигурацию сервера на основании указанных флагов при запуске или указанных переменных окружения.
+func GetConfig() *Config {
+	sync.OnceFunc(func() {
+		var err error
+		userConfig, err = getConfigWithFlags(os.Args[0], os.Args[1:])
+		if err != nil {
+			panic(err)
+		}
+	})()
+	return userConfig
+}
+
+func getConfigWithFlags(programName string, args []string) (*Config, error) {
 	parseFlags(programName, args)
 	cfg := &Config{}
 
 	if err := env.Parse(cfg); err != nil {
-		return nil, err
-	}
-	if err := env.Parse(cfg); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse config from env: %w", err)
 	}
 
 	if cfg.ServerAddr.String() == "" {
@@ -65,7 +75,7 @@ func GetConfigWithFlags(programName string, args []string) (*Config, error) {
 		cfg.Key = flagKey
 	}
 
-	cfg.Delays = DefaultConfig.Delays
+	cfg.Delays = defaultConfig.Delays
 
 	return cfg, nil
 }
