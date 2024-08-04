@@ -23,6 +23,7 @@ type fields struct {
 
 type want struct {
 	body       string
+	bodyJSON   string
 	statusCode int
 }
 
@@ -269,7 +270,7 @@ func TestMetricRouter(t *testing.T) {
 			},
 			want: want{
 				statusCode: http.StatusOK,
-				body:       `{"id":"PollCount","type":"counter","delta":15}`,
+				bodyJSON:   `{"id":"PollCount","type":"counter","delta":15}`,
 			},
 		},
 		{
@@ -336,7 +337,7 @@ func TestMetricRouter(t *testing.T) {
 			},
 			want: want{
 				statusCode: http.StatusOK,
-				body:       `{"id":"PollCount","type":"counter","delta":10}`,
+				bodyJSON:   `{"id":"PollCount","type":"counter","delta":10}`,
 			},
 		},
 	}
@@ -362,7 +363,11 @@ func TestMetricRouter(t *testing.T) {
 				body, err := io.ReadAll(res.Body)
 				require.NoError(t, res.Body.Close())
 				require.NoError(t, err)
-				assert.Equal(t, test.want.body, string(body))
+				if test.want.bodyJSON != "" {
+					assert.JSONEq(t, test.want.bodyJSON, string(body))
+				} else {
+					assert.Equal(t, test.want.body, string(body))
+				}
 			}
 		})
 	}
