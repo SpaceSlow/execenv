@@ -40,7 +40,7 @@ func RunServer(middlewareHandlers ...func(next http.Handler) http.Handler) error
 		return err
 	}
 
-	cfg := config.GetConfig()
+	cfg := config.GetServerConfig()
 
 	var storage storages.MetricStorage
 	var err error

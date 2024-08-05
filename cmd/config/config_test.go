@@ -6,17 +6,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetConfigWithFlags(t *testing.T) {
+func TestGetServerConfigWithFlags(t *testing.T) {
 	tests := []struct {
-		wantErr bool
-		want    *Config
-		flags   []string
-		envs    map[string]string
 		name    string
+		envs    map[string]string
+		want    *ServerConfig
+		flags   []string
+		wantErr bool
 	}{
 		{
 			name: "standard config",
-			want: defaultConfig,
+			want: defaultServerConfig,
 		},
 		{
 			name: "incorrect server address in envs",
@@ -36,11 +36,11 @@ func TestGetConfigWithFlags(t *testing.T) {
 				"KEY":               "env",
 			},
 			flags: []string{"-a=:8080", "-f=/tmp/flag", "-i=0", "-r", "-d=postgres://flag:flag@localhost:5432/flag", "-k=flag"},
-			want: &Config{
+			want: &ServerConfig{
 				StoragePath:   "/tmp/env",
 				DatabaseDSN:   "postgres://env:env@localhost:5432/env",
 				Key:           "env",
-				Delays:        defaultConfig.Delays,
+				Delays:        defaultServerConfig.Delays,
 				ServerAddr:    NetAddress{Host: "", Port: 9090},
 				StoreInterval: 100,
 				NeededRestore: false,
@@ -53,7 +53,7 @@ func TestGetConfigWithFlags(t *testing.T) {
 				t.Setenv(k, v)
 			}
 
-			got, err := getConfigWithFlags("program", tt.flags)
+			got, err := getServerConfigWithFlags("program", tt.flags)
 			assert.Equal(t, tt.wantErr, err != nil)
 			assert.Equal(t, tt.want, got)
 		})

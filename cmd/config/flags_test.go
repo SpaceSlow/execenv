@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type wantFlags struct {
+type wantServerFlags struct {
 	StoragePath   string
 	DatabaseDSN   string
 	Key           string
@@ -15,22 +15,22 @@ type wantFlags struct {
 	NeededRestore bool
 }
 
-func Test_parseFlags(t *testing.T) {
+func Test_parseServerFlags(t *testing.T) {
 	tests := []struct {
 		name      string
 		args      []string
-		wantFlags wantFlags
+		wantFlags wantServerFlags
 	}{
 		{
 			name: "standard flag values",
 			args: nil,
-			wantFlags: wantFlags{
-				ServerAddr:    defaultConfig.ServerAddr,
-				StoreInterval: defaultConfig.StoreInterval,
-				StoragePath:   defaultConfig.StoragePath,
-				NeededRestore: defaultConfig.NeededRestore,
-				DatabaseDSN:   defaultConfig.DatabaseDSN,
-				Key:           defaultConfig.Key,
+			wantFlags: wantServerFlags{
+				ServerAddr:    defaultServerConfig.ServerAddr,
+				StoreInterval: defaultServerConfig.StoreInterval,
+				StoragePath:   defaultServerConfig.StoragePath,
+				NeededRestore: defaultServerConfig.NeededRestore,
+				DatabaseDSN:   defaultServerConfig.DatabaseDSN,
+				Key:           defaultServerConfig.Key,
 			},
 		},
 		{
@@ -38,16 +38,16 @@ func Test_parseFlags(t *testing.T) {
 			args: []string{
 				"-a=:8081",
 			},
-			wantFlags: wantFlags{
+			wantFlags: wantServerFlags{
 				ServerAddr: NetAddress{
 					Host: "",
 					Port: 8081,
 				},
-				StoreInterval: defaultConfig.StoreInterval,
-				StoragePath:   defaultConfig.StoragePath,
-				NeededRestore: defaultConfig.NeededRestore,
-				DatabaseDSN:   defaultConfig.DatabaseDSN,
-				Key:           defaultConfig.Key,
+				StoreInterval: defaultServerConfig.StoreInterval,
+				StoragePath:   defaultServerConfig.StoragePath,
+				NeededRestore: defaultServerConfig.NeededRestore,
+				DatabaseDSN:   defaultServerConfig.DatabaseDSN,
+				Key:           defaultServerConfig.Key,
 			},
 		},
 		{
@@ -55,13 +55,13 @@ func Test_parseFlags(t *testing.T) {
 			args: []string{
 				"-i=0",
 			},
-			wantFlags: wantFlags{
-				ServerAddr:    defaultConfig.ServerAddr,
+			wantFlags: wantServerFlags{
+				ServerAddr:    defaultServerConfig.ServerAddr,
 				StoreInterval: 0,
-				StoragePath:   defaultConfig.StoragePath,
-				NeededRestore: defaultConfig.NeededRestore,
-				DatabaseDSN:   defaultConfig.DatabaseDSN,
-				Key:           defaultConfig.Key,
+				StoragePath:   defaultServerConfig.StoragePath,
+				NeededRestore: defaultServerConfig.NeededRestore,
+				DatabaseDSN:   defaultServerConfig.DatabaseDSN,
+				Key:           defaultServerConfig.Key,
 			},
 		},
 		{
@@ -69,13 +69,13 @@ func Test_parseFlags(t *testing.T) {
 			args: []string{
 				"-f=/tmp/file",
 			},
-			wantFlags: wantFlags{
-				ServerAddr:    defaultConfig.ServerAddr,
-				StoreInterval: defaultConfig.StoreInterval,
+			wantFlags: wantServerFlags{
+				ServerAddr:    defaultServerConfig.ServerAddr,
+				StoreInterval: defaultServerConfig.StoreInterval,
 				StoragePath:   "/tmp/file",
-				NeededRestore: defaultConfig.NeededRestore,
-				DatabaseDSN:   defaultConfig.DatabaseDSN,
-				Key:           defaultConfig.Key,
+				NeededRestore: defaultServerConfig.NeededRestore,
+				DatabaseDSN:   defaultServerConfig.DatabaseDSN,
+				Key:           defaultServerConfig.Key,
 			},
 		},
 		{
@@ -83,13 +83,13 @@ func Test_parseFlags(t *testing.T) {
 			args: []string{
 				"-r",
 			},
-			wantFlags: wantFlags{
-				ServerAddr:    defaultConfig.ServerAddr,
-				StoreInterval: defaultConfig.StoreInterval,
-				StoragePath:   defaultConfig.StoragePath,
+			wantFlags: wantServerFlags{
+				ServerAddr:    defaultServerConfig.ServerAddr,
+				StoreInterval: defaultServerConfig.StoreInterval,
+				StoragePath:   defaultServerConfig.StoragePath,
 				NeededRestore: true,
-				DatabaseDSN:   defaultConfig.DatabaseDSN,
-				Key:           defaultConfig.Key,
+				DatabaseDSN:   defaultServerConfig.DatabaseDSN,
+				Key:           defaultServerConfig.Key,
 			},
 		},
 		{
@@ -97,13 +97,13 @@ func Test_parseFlags(t *testing.T) {
 			args: []string{
 				"-d=postgres://username:password@localhost:5432/database_name",
 			},
-			wantFlags: wantFlags{
-				ServerAddr:    defaultConfig.ServerAddr,
-				StoreInterval: defaultConfig.StoreInterval,
-				StoragePath:   defaultConfig.StoragePath,
-				NeededRestore: defaultConfig.NeededRestore,
+			wantFlags: wantServerFlags{
+				ServerAddr:    defaultServerConfig.ServerAddr,
+				StoreInterval: defaultServerConfig.StoreInterval,
+				StoragePath:   defaultServerConfig.StoragePath,
+				NeededRestore: defaultServerConfig.NeededRestore,
 				DatabaseDSN:   "postgres://username:password@localhost:5432/database_name",
-				Key:           defaultConfig.Key,
+				Key:           defaultServerConfig.Key,
 			},
 		},
 		{
@@ -111,12 +111,12 @@ func Test_parseFlags(t *testing.T) {
 			args: []string{
 				"-k=non-standard-key",
 			},
-			wantFlags: wantFlags{
-				ServerAddr:    defaultConfig.ServerAddr,
-				StoreInterval: defaultConfig.StoreInterval,
-				StoragePath:   defaultConfig.StoragePath,
-				NeededRestore: defaultConfig.NeededRestore,
-				DatabaseDSN:   defaultConfig.DatabaseDSN,
+			wantFlags: wantServerFlags{
+				ServerAddr:    defaultServerConfig.ServerAddr,
+				StoreInterval: defaultServerConfig.StoreInterval,
+				StoragePath:   defaultServerConfig.StoragePath,
+				NeededRestore: defaultServerConfig.NeededRestore,
+				DatabaseDSN:   defaultServerConfig.DatabaseDSN,
 				Key:           "non-standard-key",
 			},
 		},
@@ -130,7 +130,7 @@ func Test_parseFlags(t *testing.T) {
 				"-k=non-standard-key",
 				"-d=postgres://username:password@localhost:5432/database_name",
 			},
-			wantFlags: wantFlags{
+			wantFlags: wantServerFlags{
 				ServerAddr: NetAddress{
 					Host: "example.com",
 					Port: 80,
@@ -146,16 +146,157 @@ func Test_parseFlags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parseFlags("program", tt.args)
+			parseServerFlags("program", tt.args)
 
-			if !assert.ObjectsAreEqual(tt.wantFlags.ServerAddr, flagRunAddr) {
-				t.Errorf("expected flagServerAddr: %v, got: %v", tt.wantFlags.ServerAddr, flagRunAddr)
+			if !assert.ObjectsAreEqual(tt.wantFlags.ServerAddr, flagServerRunAddr) {
+				t.Errorf("expected flagServerAddr: %v, got: %v", tt.wantFlags.ServerAddr, flagServerRunAddr)
 			}
-			assert.Equalf(t, tt.wantFlags.StoragePath, flagStoragePath, `expected flagStoragePath: %v, got: %v`, tt.wantFlags.StoragePath, flagStoragePath)
-			assert.Equalf(t, tt.wantFlags.StoreInterval, flagStoreInterval, `expected flagStoreInterval: %v, got: %v`, tt.wantFlags.StoreInterval, flagStoreInterval)
-			assert.Equalf(t, tt.wantFlags.NeededRestore, flagNeedRestore, `expected flagNeedRestore: %v, got: %v`, tt.wantFlags.NeededRestore, flagNeedRestore)
-			assert.Equalf(t, tt.wantFlags.DatabaseDSN, flagDatabaseDSN, `expected flagDatabaseDSN: "%v", got: "%v"`, tt.wantFlags.DatabaseDSN, flagDatabaseDSN)
-			assert.Equalf(t, tt.wantFlags.Key, flagKey, `expected flagKey: "%v", got: "%v"`, tt.wantFlags.Key, flagKey)
+			assert.Equalf(t, tt.wantFlags.StoragePath, flagServerStoragePath, `expected flagStoragePath: %v, got: %v`, tt.wantFlags.StoragePath, flagServerStoragePath)
+			assert.Equalf(t, tt.wantFlags.StoreInterval, flagServerStoreInterval, `expected flagStoreInterval: %v, got: %v`, tt.wantFlags.StoreInterval, flagServerStoreInterval)
+			assert.Equalf(t, tt.wantFlags.NeededRestore, flagServerNeedRestore, `expected flagNeedRestore: %v, got: %v`, tt.wantFlags.NeededRestore, flagServerNeedRestore)
+			assert.Equalf(t, tt.wantFlags.DatabaseDSN, flagServerDatabaseDSN, `expected flagDatabaseDSN: "%v", got: "%v"`, tt.wantFlags.DatabaseDSN, flagServerDatabaseDSN)
+			assert.Equalf(t, tt.wantFlags.Key, flagServerKey, `expected flagKey: "%v", got: "%v"`, tt.wantFlags.Key, flagServerKey)
+		})
+	}
+}
+
+type wantAgentFlags struct {
+	Key            string
+	ServerAddr     NetAddress
+	ReportInterval int
+	PollInterval   int
+	RateLimit      int
+}
+
+var standardFlags = wantAgentFlags{
+	ServerAddr: NetAddress{
+		Host: "localhost",
+		Port: 8080,
+	},
+	ReportInterval: 10,
+	PollInterval:   2,
+	RateLimit:      1,
+	Key:            "",
+}
+
+func Test_parseAgentFlags(t *testing.T) {
+	tests := []struct {
+		args      []string
+		name      string
+		wantFlags wantAgentFlags
+	}{
+		{
+			name: "checking standard flag values",
+			args: nil,
+			wantFlags: wantAgentFlags{
+				ServerAddr:     standardFlags.ServerAddr,
+				ReportInterval: standardFlags.ReportInterval,
+				PollInterval:   standardFlags.PollInterval,
+				RateLimit:      standardFlags.RateLimit,
+				Key:            standardFlags.Key,
+			},
+		},
+		{
+			name: "checking non-standard port flag",
+			args: []string{
+				"-a=:8081",
+			},
+			wantFlags: wantAgentFlags{
+				ServerAddr: NetAddress{
+					Host: "",
+					Port: 8081,
+				},
+				ReportInterval: standardFlags.ReportInterval,
+				PollInterval:   standardFlags.PollInterval,
+				RateLimit:      standardFlags.RateLimit,
+				Key:            standardFlags.Key,
+			},
+		},
+		{
+			name: "checking non-standard reporting interval flag",
+			args: []string{
+				"-r=30",
+			},
+			wantFlags: wantAgentFlags{
+				ServerAddr:     standardFlags.ServerAddr,
+				ReportInterval: 30,
+				PollInterval:   standardFlags.PollInterval,
+				RateLimit:      standardFlags.RateLimit,
+				Key:            standardFlags.Key,
+			},
+		},
+		{
+			name: "checking non-standard polling interval flag",
+			args: []string{
+				"-p=2",
+			},
+			wantFlags: wantAgentFlags{
+				ServerAddr:     standardFlags.ServerAddr,
+				ReportInterval: standardFlags.ReportInterval,
+				PollInterval:   2,
+				RateLimit:      standardFlags.RateLimit,
+				Key:            standardFlags.Key,
+			},
+		},
+		{
+			name: "checking non-standard rate limit flag",
+			args: []string{
+				"-l=3",
+			},
+			wantFlags: wantAgentFlags{
+				ServerAddr:     standardFlags.ServerAddr,
+				ReportInterval: standardFlags.ReportInterval,
+				PollInterval:   standardFlags.PollInterval,
+				RateLimit:      3,
+				Key:            standardFlags.Key,
+			},
+		},
+		{
+			name: "checking setting non-empty key flag",
+			args: []string{
+				"-k=non-standard-key",
+			},
+			wantFlags: wantAgentFlags{
+				ServerAddr:     standardFlags.ServerAddr,
+				ReportInterval: standardFlags.ReportInterval,
+				PollInterval:   standardFlags.PollInterval,
+				RateLimit:      standardFlags.RateLimit,
+				Key:            "non-standard-key",
+			},
+		},
+		{
+			name: "checking all flags",
+			args: []string{
+				"-a=example.com:80",
+				"-l=10",
+				"-r=5",
+				"-p=1",
+				"-k=non-standard-key",
+			},
+			wantFlags: wantAgentFlags{
+				ServerAddr: NetAddress{
+					Host: "example.com",
+					Port: 80,
+				},
+				ReportInterval: 5,
+				PollInterval:   1,
+				RateLimit:      10,
+				Key:            "non-standard-key",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parseAgentFlags("program", tt.args)
+
+			if !assert.ObjectsAreEqual(tt.wantFlags.ServerAddr, flagAgentServerAddr) {
+				t.Errorf("expected flagServerAddr: %v, got: %v", tt.wantFlags.ServerAddr, flagAgentServerAddr)
+			}
+			assert.Equalf(t, tt.wantFlags.ReportInterval, flagAgentReportInterval, `expected flagReportInterval: %v, got: %v`, tt.wantFlags.ReportInterval, flagAgentReportInterval)
+			assert.Equalf(t, tt.wantFlags.PollInterval, flagAgentPollInterval, `expected flagPollInterval: %v, got: %v`, tt.wantFlags.PollInterval, flagAgentPollInterval)
+			assert.Equalf(t, tt.wantFlags.RateLimit, flagAgentRateLimit, `expected flagRateLimit: %v, got: %v`, tt.wantFlags.RateLimit, flagAgentRateLimit)
+			assert.Equalf(t, tt.wantFlags.Key, flagAgentKey, `expected flagKey: "%v", got: "%v"`, tt.wantFlags.Key, flagAgentKey)
 		})
 	}
 }

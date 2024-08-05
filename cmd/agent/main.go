@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/SpaceSlow/execenv/cmd/config"
 	"github.com/SpaceSlow/execenv/cmd/metrics"
 )
 
@@ -35,11 +36,7 @@ func printBuildInfo() {
 
 func main() {
 	printBuildInfo()
-	cfg, err := GetConfigWithFlags(os.Args[0], os.Args[1:])
-
-	if err != nil {
-		panic(err)
-	}
+	cfg := config.GetAgentConfig()
 
 	url := "http://" + cfg.ServerAddr.String() + "/updates/"
 	pollInterval := time.Duration(cfg.PollInterval) * time.Second

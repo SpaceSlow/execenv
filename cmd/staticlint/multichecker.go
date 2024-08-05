@@ -64,7 +64,6 @@ import (
 )
 
 func main() {
-
 	var checks = []*analysis.Analyzer{
 		// go/analysis/passes analyzers
 		appends.Analyzer,

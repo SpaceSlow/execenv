@@ -3,24 +3,45 @@ package config
 import "flag"
 
 var (
-	flagRunAddr       NetAddress
-	flagStoreInterval uint
-	flagStoragePath   string
-	flagNeedRestore   bool
-	flagDatabaseDSN   string
-	flagKey           string
+	flagServerRunAddr       NetAddress
+	flagServerStoreInterval uint
+	flagServerStoragePath   string
+	flagServerNeedRestore   bool
+	flagServerDatabaseDSN   string
+	flagServerKey           string
 )
 
-func parseFlags(programName string, args []string) {
+func parseServerFlags(programName string, args []string) {
 	flagSet := flag.NewFlagSet(programName, flag.ContinueOnError)
 
-	flagRunAddr = defaultConfig.ServerAddr
-	flagSet.Var(&flagRunAddr, "a", "address and port to run server")
-	flagSet.UintVar(&flagStoreInterval, "i", defaultConfig.StoreInterval, "store interval in secs (default 300 sec)")
-	flagSet.StringVar(&flagStoragePath, "f", defaultConfig.StoragePath, "file storage path (default /tmp/metrics-db.json")
-	flagSet.BoolVar(&flagNeedRestore, "r", defaultConfig.NeededRestore, "needed loading saved metrics from file (default true)")
-	flagSet.StringVar(&flagDatabaseDSN, "d", defaultConfig.DatabaseDSN, "PostgreSQL (ver. >=10) database DSN (example: postgres://username:password@localhost:5432/database_name")
-	flagSet.StringVar(&flagKey, "k", defaultConfig.Key, "key for signing queries")
+	flagServerRunAddr = defaultServerConfig.ServerAddr
+	flagSet.Var(&flagServerRunAddr, "a", "address and port to run server")
+	flagSet.UintVar(&flagServerStoreInterval, "i", defaultServerConfig.StoreInterval, "store interval in secs (default 300 sec)")
+	flagSet.StringVar(&flagServerStoragePath, "f", defaultServerConfig.StoragePath, "file storage path (default /tmp/metrics-db.json")
+	flagSet.BoolVar(&flagServerNeedRestore, "r", defaultServerConfig.NeededRestore, "needed loading saved metrics from file (default true)")
+	flagSet.StringVar(&flagServerDatabaseDSN, "d", defaultServerConfig.DatabaseDSN, "PostgreSQL (ver. >=10) database DSN (example: postgres://username:password@localhost:5432/database_name")
+	flagSet.StringVar(&flagServerKey, "k", defaultServerConfig.Key, "key for signing queries")
+
+	flagSet.Parse(args)
+}
+
+var (
+	flagAgentServerAddr     NetAddress
+	flagAgentReportInterval int
+	flagAgentPollInterval   int
+	flagAgentKey            string
+	flagAgentRateLimit      int
+)
+
+func parseAgentFlags(programName string, args []string) {
+	flagSet := flag.NewFlagSet(programName, flag.ContinueOnError)
+
+	flagAgentServerAddr = defaultAgentConfig.ServerAddr
+	flagSet.Var(&flagAgentServerAddr, "a", "address and port server")
+	flagSet.IntVar(&flagAgentReportInterval, "r", defaultAgentConfig.ReportInterval, "interval in seconds of sending metrics to server")
+	flagSet.IntVar(&flagAgentPollInterval, "p", defaultAgentConfig.PollInterval, "interval in seconds of polling metrics")
+	flagSet.StringVar(&flagAgentKey, "k", defaultAgentConfig.Key, "key for signing queries")
+	flagSet.IntVar(&flagAgentRateLimit, "l", defaultAgentConfig.RateLimit, "rate limit outgoing requests to the server")
 
 	flagSet.Parse(args)
 }

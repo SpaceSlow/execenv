@@ -27,7 +27,7 @@ func getHashBody(req *http.Request, key string) (string, error) {
 // WithSigning middleware предназначенная для подписи данных и проверки подписи.
 func WithSigning(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		key := config.GetConfig().Key
+		key := config.GetServerConfig().Key
 		if headerHash := r.Header.Get("Hash"); headerHash != "none" && headerHash != "" && key != "" {
 			hashSum, err := getHashBody(r, key)
 			if err != nil {
