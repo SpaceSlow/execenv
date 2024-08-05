@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -12,30 +11,8 @@ import (
 	"github.com/SpaceSlow/execenv/cmd/metrics"
 )
 
-var (
-	buildVersion string
-	buildDate    string
-	buildCommit  string
-)
-
-func printBuildInfo() {
-	if buildVersion == "" {
-		buildVersion = "N/A"
-	}
-	if buildDate == "" {
-		buildDate = "N/A"
-	}
-	if buildCommit == "" {
-		buildCommit = "N/A"
-	}
-
-	fmt.Println("Build version:", buildVersion)
-	fmt.Println("Build date:", buildDate)
-	fmt.Println("Build commit:", buildCommit)
-}
-
 func main() {
-	printBuildInfo()
+	config.PrintBuildInfo()
 	cfg := config.GetAgentConfig()
 
 	url := "http://" + cfg.ServerAddr.String() + "/updates/"

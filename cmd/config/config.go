@@ -9,6 +9,36 @@ import (
 	"github.com/caarlos0/env"
 )
 
+var (
+	buildVersion string
+	buildDate    string
+	buildCommit  string
+)
+
+// PrintBuildInfo выводит информацию о сборке.
+// Необходима сборка с флагом ldflags следующих переменных:
+//
+// - github.com/SpaceSlow/execenv/cmd/config.buildVersion
+//
+// - github.com/SpaceSlow/execenv/cmd/config.buildDate
+//
+// - github.com/SpaceSlow/execenv/cmd/config.buildCommit
+func PrintBuildInfo() {
+	if buildVersion == "" {
+		buildVersion = "N/A"
+	}
+	if buildDate == "" {
+		buildDate = "N/A"
+	}
+	if buildCommit == "" {
+		buildCommit = "N/A"
+	}
+
+	fmt.Println("Build version:", buildVersion)
+	fmt.Println("Build date:", buildDate)
+	fmt.Println("Build commit:", buildCommit)
+}
+
 var defaultServerConfig = &ServerConfig{
 	ServerAddr: NetAddress{
 		Host: "localhost",
