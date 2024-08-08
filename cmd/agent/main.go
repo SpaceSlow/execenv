@@ -7,14 +7,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/SpaceSlow/execenv/cmd/config"
 	"github.com/SpaceSlow/execenv/cmd/metrics"
 )
 
 func main() {
-	cfg, err := GetConfigWithFlags()
-
+	config.PrintBuildInfo()
+	cfg, err := config.GetAgentConfig()
 	if err != nil {
-		panic(err)
+		log.Fatalf("stopped agent: %s", err)
 	}
 
 	url := "http://" + cfg.ServerAddr.String() + "/updates/"

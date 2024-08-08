@@ -16,13 +16,13 @@ func TestMemStorage_Add(t *testing.T) {
 		metric   metrics.Metric
 	}
 	type want struct {
+		value any
 		err   bool
-		value interface{}
 	}
 	tests := []struct {
+		want   want
 		name   string
 		fields fields
-		want   want
 	}{
 		{
 			name: "adding Counter metric in empty storage",
@@ -170,14 +170,14 @@ func TestMemStorage_Get(t *testing.T) {
 		gauges   map[string]float64
 	}
 	type args struct {
-		metricType metrics.MetricType
 		name       string
+		metricType metrics.MetricType
 	}
 	tests := []struct {
 		name           string
 		fields         fields
-		args           args
 		expectedMetric *metrics.Metric
+		args           args
 		expectedOk     bool
 	}{
 		{
@@ -346,11 +346,11 @@ func TestMemStorage_Batch(t *testing.T) {
 		metricSlice []metrics.Metric
 	}
 	tests := []struct {
+		wantErr     error
 		name        string
 		fields      fields
-		args        args
 		wantMetrics fields
-		wantErr     error
+		args        args
 	}{
 		{
 			name: "check update values after batch one gauge metric",
@@ -431,4 +431,9 @@ func TestMemStorage_Batch(t *testing.T) {
 			assert.Equal(t, tt.wantMetrics.gauges, storage.gauges)
 		})
 	}
+}
+
+func TestMemStorage_Close(t *testing.T) {
+	storage := NewMemStorage()
+	assert.Nil(t, storage.Close())
 }

@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
+	"go.uber.org/zap"
 	"net/http"
 
-	"go.uber.org/zap"
-
+	"github.com/SpaceSlow/execenv/cmd/config"
 	"github.com/SpaceSlow/execenv/cmd/logger"
 	"github.com/SpaceSlow/execenv/cmd/middlewares"
 	"github.com/SpaceSlow/execenv/cmd/routers"
@@ -17,7 +17,7 @@ func RunServer(middlewareHandlers ...func(next http.Handler) http.Handler) error
 		return err
 	}
 
-	cfg, err := GetConfigWithFlags()
+	cfg, err := config.GetServerConfig()
 	if err != nil {
 		return err
 	}
@@ -33,7 +33,6 @@ func RunServer(middlewareHandlers ...func(next http.Handler) http.Handler) error
 		return err
 	}
 	defer storage.Close()
-	middlewares.KEY = cfg.Key
 
 	mux := routers.MetricRouter(storage).(http.Handler)
 	for _, middleware := range middlewareHandlers {
@@ -44,6 +43,7 @@ func RunServer(middlewareHandlers ...func(next http.Handler) http.Handler) error
 }
 
 func main() {
+	config.PrintBuildInfo()
 	middlewareHandlers := []func(next http.Handler) http.Handler{
 		middlewares.WithSigning,
 		middlewares.WithCompressing,

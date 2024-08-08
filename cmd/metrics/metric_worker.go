@@ -19,7 +19,6 @@ type MetricWorkers struct {
 	metricsForSend chan []Metric
 	errorsCh       chan error
 
-	metrics   []Metric
 	url       string
 	key       string
 	delays    []time.Duration
@@ -64,7 +63,8 @@ func (mw *MetricWorkers) Send(metrics []Metric) {
 	resCh := make(chan *http.Response, 1)
 	defer close(resCh)
 	sendMetrics := func() error {
-		res, err := http.DefaultClient.Do(req)
+		var res *http.Response
+		res, err = http.DefaultClient.Do(req)
 		if err != nil {
 			if len(resCh) > 0 {
 				<-resCh
@@ -75,7 +75,7 @@ func (mw *MetricWorkers) Send(metrics []Metric) {
 		if len(resCh) > 0 {
 			<-resCh
 		}
-		if err := res.Body.Close(); err != nil {
+		if err = res.Body.Close(); err != nil {
 			return err
 		}
 		resCh <- res

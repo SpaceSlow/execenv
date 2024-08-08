@@ -7,10 +7,9 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-)
 
-// KEY Секретный ключ для подписи в WithSigning(http.Handler) http.Handler.
-var KEY string
+	"github.com/SpaceSlow/execenv/cmd/config"
+)
 
 func getHashBody(req *http.Request, key string) (string, error) {
 	body, err := io.ReadAll(req.Body)
@@ -28,8 +27,14 @@ func getHashBody(req *http.Request, key string) (string, error) {
 // WithSigning middleware предназначенная для подписи данных и проверки подписи.
 func WithSigning(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if headerHash := r.Header.Get("Hash"); headerHash != "none" && headerHash != "" && KEY != "" {
-			hashSum, err := getHashBody(r, KEY)
+		cfg, err := config.GetServerConfig()
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if headerHash := r.Header.Get("Hash"); headerHash != "none" && headerHash != "" && cfg.Key != "" {
+			var hashSum string
+			hashSum, err = getHashBody(r, cfg.Key)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
@@ -40,7 +45,7 @@ func WithSigning(next http.Handler) http.Handler {
 			}
 		}
 
-		if KEY == "" {
+		if cfg.Key == "" {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -60,7 +65,7 @@ func WithSigning(next http.Handler) http.Handler {
 				w.Header().Add(key, value)
 			}
 		}
-		w.Header().Set("Hash", hex.EncodeToString(h.Sum([]byte(KEY))))
+		w.Header().Set("Hash", hex.EncodeToString(h.Sum([]byte(cfg.Key))))
 		w.WriteHeader(l.Code)
 		w.Write(body)
 	})

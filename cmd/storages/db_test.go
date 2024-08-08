@@ -22,7 +22,6 @@ type postgresContainer struct {
 	pool     *dockertest.Pool
 	resource *dockertest.Resource
 	dsn      string
-	db       *sql.DB
 }
 
 func newPostgresContainer() *postgresContainer {
@@ -33,12 +32,12 @@ func (c *postgresContainer) Start() error {
 	var err error
 	c.pool, err = dockertest.NewPool("")
 	if err != nil {
-		return fmt.Errorf("could not construct pool: %s", err)
+		return fmt.Errorf("could not construct pool: %w", err)
 	}
 
 	err = c.pool.Client.Ping()
 	if err != nil {
-		return fmt.Errorf("could not connect to Docker: %s", err)
+		return fmt.Errorf("could not connect to Docker: %w", err)
 	}
 
 	c.resource, err = c.pool.RunWithOptions(&dockertest.RunOptions{
@@ -56,7 +55,7 @@ func (c *postgresContainer) Start() error {
 		}
 	})
 	if err != nil {
-		return fmt.Errorf("could not start resource: %s", err)
+		return fmt.Errorf("could not start resource: %w", err)
 	}
 
 	c.dsn = fmt.Sprintf("postgres://test:test@localhost:%s/test?sslmode=disable", c.resource.GetPort("5432/tcp"))
@@ -68,7 +67,7 @@ func (c *postgresContainer) Start() error {
 		}
 		return db.Ping()
 	}); err != nil {
-		return fmt.Errorf("could not connect to database: %s", err)
+		return fmt.Errorf("could not connect to database: %w", err)
 	}
 	return nil
 }
@@ -77,7 +76,20 @@ func (c *postgresContainer) Stop() error {
 	return c.pool.Purge(c.resource)
 }
 
-var storage *DBStorage
+type DBStorageWithDeleting struct {
+	*DBStorage
+	dsn string
+}
+
+func NewDBStorageWithDeleting(storage *DBStorage, dsn string) *DBStorageWithDeleting {
+	return &DBStorageWithDeleting{DBStorage: storage, dsn: dsn}
+}
+
+func (s DBStorageWithDeleting) DeleteMetrics() {
+	s.db.ExecContext(s.ctx, "DELETE FROM metrics")
+}
+
+var storage *DBStorageWithDeleting
 
 func TestMain(m *testing.M) {
 	container := newPostgresContainer()
@@ -86,31 +98,27 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Could not start postgres container: %s", err)
 	}
 	defer func(container *postgresContainer) {
-		err := container.Stop()
+		err = container.Stop()
 		if err != nil {
 			log.Fatalf("Could not stop postgres container: %s", err)
 		}
 	}(container)
-	storage, err = NewDBStorage(context.Background(), container.dsn, []time.Duration{time.Second})
+	s, err := NewDBStorage(context.Background(), container.dsn, []time.Duration{time.Second})
 	if err != nil {
 		log.Printf("Could not create DBStorage: %s", err)
 		return
 	}
-
-	if err := createMetricsTable(context.Background(), storage.db); err != nil {
-		log.Printf("Could not create metrics table: %s", err)
-		return
-	}
+	storage = NewDBStorageWithDeleting(s, container.dsn)
 
 	m.Run()
 }
 
-func TestDBStorage_Add(t *testing.T) {
+func TestDBStorage_AddGet(t *testing.T) {
 	tests := []struct {
-		name       string
 		metric     *metrics.Metric
 		wantMetric *metrics.Metric
 		wantErr    error
+		name       string
 	}{
 		{
 			name: "adding counter metric",
@@ -187,9 +195,95 @@ func TestDBStorage_Add(t *testing.T) {
 
 			stored, _ := storage.Get(tt.metric.Type, tt.metric.Name)
 			assert.ObjectsAreEqual(tt.wantMetric, stored)
-
 		})
 	}
+}
+
+func TestDBStorage_BatchList(t *testing.T) {
+	tests := []struct {
+		wantErr     error
+		name        string
+		metricSlice []metrics.Metric
+	}{
+		{
+			name: "batch one metric",
+			metricSlice: []metrics.Metric{
+				{
+					Type:  metrics.Gauge,
+					Name:  "GaugeMetric",
+					Value: 0.11,
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "batch several metrics",
+			metricSlice: []metrics.Metric{
+				{
+					Type:  metrics.Counter,
+					Name:  "PollCount",
+					Value: int64(5),
+				},
+				{
+					Type:  metrics.Gauge,
+					Name:  "RandomValue",
+					Value: 10.11,
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "batch metrics with incorrect type",
+			metricSlice: []metrics.Metric{
+				{
+					Type:  -1,
+					Name:  "PollCount",
+					Value: int64(15),
+				},
+				{
+					Type:  metrics.Gauge,
+					Name:  "RandomValue",
+					Value: 3.22,
+				},
+			},
+			wantErr: metrics.ErrIncorrectMetricTypeOrValue,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage.DeleteMetrics()
+			err := storage.Batch(tt.metricSlice)
+			assert.ErrorIs(t, err, tt.wantErr)
+
+			if err != nil {
+				return
+			}
+
+			actualMetrics := storage.List()
+			assert.ElementsMatch(t, tt.metricSlice, actualMetrics)
+		})
+	}
+}
+
+func TestDBStorage_CheckConnection(t *testing.T) {
+	assert.True(t, storage.CheckConnection())
+
+	require.NoError(t, storage.db.Close())
+	assert.False(t, storage.CheckConnection())
+
+	dbStorage, err := NewDBStorage(storage.ctx, storage.dsn, []time.Duration{time.Second})
+	require.NoError(t, err)
+
+	storage = NewDBStorageWithDeleting(dbStorage, storage.dsn)
+}
+
+func TestDBStorage_Close(t *testing.T) {
+	assert.NoError(t, storage.Close())
+
+	dbStorage, err := NewDBStorage(storage.ctx, storage.dsn, []time.Duration{time.Second})
+	require.NoError(t, err)
+
+	storage = NewDBStorageWithDeleting(dbStorage, storage.dsn)
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"

@@ -13,16 +13,16 @@ var (
 )
 
 type JSONMetric struct {
-	ID    string   `json:"id"`
-	MType string   `json:"type"`
 	Delta *int64   `json:"delta,omitempty"`
 	Value *float64 `json:"value,omitempty"`
+	ID    string   `json:"id"`
+	MType string   `json:"type"`
 }
 
 type Metric struct {
-	Type  MetricType
+	Value any
 	Name  string
-	Value interface{}
+	Type  MetricType
 }
 
 func NewMetric(metricType MetricType, name, value string) (*Metric, error) {
@@ -39,7 +39,7 @@ func NewMetric(metricType MetricType, name, value string) (*Metric, error) {
 		return nil, ErrIncorrectMetricTypeOrValue
 	}
 
-	return &Metric{metricType, name, val}, nil
+	return &Metric{Type: metricType, Name: name, Value: val}, nil
 }
 
 func (m *Metric) MarshalJSON() ([]byte, error) {

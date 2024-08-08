@@ -6,6 +6,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"sort"
+	"strings"
 
 	"github.com/SpaceSlow/execenv/cmd/routers"
 	"github.com/SpaceSlow/execenv/cmd/storages"
@@ -64,12 +66,15 @@ func Example() {
 	defer response.Body.Close()
 
 	// Выведем полученные метрики
-	metrics, _ := io.ReadAll(response.Body)
-	fmt.Println(string(metrics))
+	metricsResponse, _ := io.ReadAll(response.Body)
+
+	metricSlice := sort.StringSlice(strings.Split(string(metricsResponse), "\n"))
+	metricSlice.Sort()
+	fmt.Println(strings.Join(metricSlice, "\n"))
 
 	// Output:
-	// foo = 42 (counter)
+	// GolangDayMonth = 10.11 (gauge)
 	// GolangYear = 2009 (counter)
 	// bar = 42.42 (gauge)
-	// GolangDayMonth = 10.11 (gauge)
+	// foo = 42 (counter)
 }
