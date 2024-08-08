@@ -74,14 +74,7 @@ func GetServerConfig() (*ServerConfig, error) {
 	return serverConfig, err
 }
 
-func getServerConfigWithFlags(programName string, args []string) (*ServerConfig, error) {
-	parseServerFlags(programName, args)
-	cfg := &ServerConfig{}
-
-	if err := env.Parse(cfg); err != nil {
-		return nil, fmt.Errorf("parse config from env: %w", err)
-	}
-
+func setServerDefaultValues(cfg *ServerConfig) {
 	if cfg.ServerAddr.String() == "" {
 		cfg.ServerAddr = flagServerRunAddr
 	}
@@ -104,7 +97,16 @@ func getServerConfigWithFlags(programName string, args []string) (*ServerConfig,
 	}
 
 	cfg.Delays = defaultServerConfig.Delays
+}
 
+func getServerConfigWithFlags(programName string, args []string) (*ServerConfig, error) {
+	parseServerFlags(programName, args)
+	cfg := &ServerConfig{}
+
+	if err := env.Parse(cfg); err != nil {
+		return nil, fmt.Errorf("parse config from env: %w", err)
+	}
+	setServerDefaultValues(cfg)
 	return cfg, nil
 }
 
@@ -141,14 +143,7 @@ func GetAgentConfig() (*AgentConfig, error) {
 	return agentConfig, err
 }
 
-func getAgentConfigWithFlags(programName string, args []string) (*AgentConfig, error) {
-	parseAgentFlags(programName, args)
-	cfg := &AgentConfig{}
-
-	if err := env.Parse(cfg); err != nil {
-		return nil, fmt.Errorf("parse config from env: %w", err)
-	}
-
+func setAgentDefaultValues(cfg *AgentConfig) {
 	if cfg.ReportInterval == 0 {
 		cfg.ReportInterval = defaultAgentConfig.ReportInterval
 	}
@@ -162,15 +157,20 @@ func getAgentConfigWithFlags(programName string, args []string) (*AgentConfig, e
 		cfg.Key = defaultAgentConfig.Key
 	}
 
-	cfg.Delays = []time.Duration{
-		time.Second,
-		3 * time.Second,
-		5 * time.Second,
-	}
+	cfg.Delays = defaultAgentConfig.Delays
 
 	if cfg.RateLimit == 0 {
 		cfg.RateLimit = defaultAgentConfig.RateLimit
 	}
+}
 
+func getAgentConfigWithFlags(programName string, args []string) (*AgentConfig, error) {
+	parseAgentFlags(programName, args)
+	cfg := &AgentConfig{}
+
+	if err := env.Parse(cfg); err != nil {
+		return nil, fmt.Errorf("parse config from env: %w", err)
+	}
+	setAgentDefaultValues(cfg)
 	return cfg, nil
 }
