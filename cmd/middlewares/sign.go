@@ -27,9 +27,14 @@ func getHashBody(req *http.Request, key string) (string, error) {
 // WithSigning middleware предназначенная для подписи данных и проверки подписи.
 func WithSigning(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		key := config.GetServerConfig().Key
-		if headerHash := r.Header.Get("Hash"); headerHash != "none" && headerHash != "" && key != "" {
-			hashSum, err := getHashBody(r, key)
+		cfg, err := config.GetServerConfig()
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if headerHash := r.Header.Get("Hash"); headerHash != "none" && headerHash != "" && cfg.Key != "" {
+			var hashSum string
+			hashSum, err = getHashBody(r, cfg.Key)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
@@ -40,7 +45,7 @@ func WithSigning(next http.Handler) http.Handler {
 			}
 		}
 
-		if key == "" {
+		if cfg.Key == "" {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -60,7 +65,7 @@ func WithSigning(next http.Handler) http.Handler {
 				w.Header().Add(key, value)
 			}
 		}
-		w.Header().Set("Hash", hex.EncodeToString(h.Sum([]byte(key))))
+		w.Header().Set("Hash", hex.EncodeToString(h.Sum([]byte(cfg.Key))))
 		w.WriteHeader(l.Code)
 		w.Write(body)
 	})

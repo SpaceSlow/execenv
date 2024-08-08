@@ -13,7 +13,10 @@ import (
 
 func main() {
 	config.PrintBuildInfo()
-	cfg := config.GetAgentConfig()
+	cfg, err := config.GetAgentConfig()
+	if err != nil {
+		log.Fatalf("stopped agent: %s", err)
+	}
 
 	url := "http://" + cfg.ServerAddr.String() + "/updates/"
 	pollInterval := time.Duration(cfg.PollInterval) * time.Second

@@ -66,15 +66,12 @@ type ServerConfig struct {
 var serverConfig *ServerConfig = nil
 
 // GetServerConfig возвращает конфигурацию сервера на основании указанных флагов при запуске или указанных переменных окружения.
-func GetServerConfig() *ServerConfig {
+func GetServerConfig() (*ServerConfig, error) {
+	var err error
 	sync.OnceFunc(func() {
-		var err error
 		serverConfig, err = getServerConfigWithFlags(os.Args[0], os.Args[1:])
-		if err != nil {
-			panic(err)
-		}
 	})()
-	return serverConfig
+	return serverConfig, err
 }
 
 func getServerConfigWithFlags(programName string, args []string) (*ServerConfig, error) {
@@ -136,15 +133,12 @@ type AgentConfig struct {
 var agentConfig *AgentConfig = nil
 
 // GetAgentConfig возвращает конфигурацию агента на основании указанных флагов при запуске или указанных переменных окружения.
-func GetAgentConfig() *AgentConfig {
+func GetAgentConfig() (*AgentConfig, error) {
+	var err error
 	sync.OnceFunc(func() {
-		var err error
 		agentConfig, err = getAgentConfigWithFlags(os.Args[0], os.Args[1:])
-		if err != nil {
-			panic(err)
-		}
 	})()
-	return agentConfig
+	return agentConfig, err
 }
 
 func getAgentConfigWithFlags(programName string, args []string) (*AgentConfig, error) {

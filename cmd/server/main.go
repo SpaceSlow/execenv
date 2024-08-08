@@ -17,10 +17,12 @@ func RunServer(middlewareHandlers ...func(next http.Handler) http.Handler) error
 		return err
 	}
 
-	cfg := config.GetServerConfig()
+	cfg, err := config.GetServerConfig()
+	if err != nil {
+		return err
+	}
 
 	var storage storages.MetricStorage
-	var err error
 	if cfg.DatabaseDSN != "" {
 		storage, err = storages.NewDBStorage(context.Background(), cfg.DatabaseDSN, cfg.Delays)
 		logger.Log.Info("using storage DB", zap.String("DSN", cfg.DatabaseDSN))
