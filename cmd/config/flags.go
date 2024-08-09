@@ -9,6 +9,7 @@ var (
 	flagServerNeedRestore   bool
 	flagServerDatabaseDSN   string
 	flagServerKey           string
+	flagServerCertFile      string
 )
 
 func parseServerFlags(programName string, args []string) {
@@ -21,6 +22,7 @@ func parseServerFlags(programName string, args []string) {
 	flagSet.BoolVar(&flagServerNeedRestore, "r", defaultServerConfig.NeededRestore, "needed loading saved metrics from file (default true)")
 	flagSet.StringVar(&flagServerDatabaseDSN, "d", defaultServerConfig.DatabaseDSN, "PostgreSQL (ver. >=10) database DSN (example: postgres://username:password@localhost:5432/database_name")
 	flagSet.StringVar(&flagServerKey, "k", defaultServerConfig.Key, "key for signing queries")
+	flagSet.StringVar(&flagServerCertFile, "crypto-key", defaultServerConfig.CertFile, "path to cert file")
 
 	flagSet.Parse(args)
 }
@@ -31,6 +33,7 @@ var (
 	flagAgentPollInterval   int
 	flagAgentKey            string
 	flagAgentRateLimit      int
+	flagAgentCertFile       string
 )
 
 func parseAgentFlags(programName string, args []string) {
@@ -42,6 +45,7 @@ func parseAgentFlags(programName string, args []string) {
 	flagSet.IntVar(&flagAgentPollInterval, "p", defaultAgentConfig.PollInterval, "interval in seconds of polling metrics")
 	flagSet.StringVar(&flagAgentKey, "k", defaultAgentConfig.Key, "key for signing queries")
 	flagSet.IntVar(&flagAgentRateLimit, "l", defaultAgentConfig.RateLimit, "rate limit outgoing requests to the server")
+	flagSet.StringVar(&flagAgentCertFile, "crypto-key", defaultAgentConfig.CertFile, "path to cert file")
 
 	flagSet.Parse(args)
 }

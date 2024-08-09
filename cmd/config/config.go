@@ -49,6 +49,7 @@ var defaultServerConfig = &ServerConfig{
 	NeededRestore: true,
 	DatabaseDSN:   "",
 	Key:           "",
+	CertFile:      "",
 	Delays:        []time.Duration{time.Second, 3 * time.Second, 5 * time.Second},
 }
 
@@ -57,6 +58,7 @@ type ServerConfig struct {
 	StoragePath   string `env:"FILE_STORAGE_PATH"`
 	DatabaseDSN   string `env:"DATABASE_DSN"`
 	Key           string `env:"KEY"`
+	CertFile      string `env:"CRYPTO_KEY"`
 	Delays        []time.Duration
 	ServerAddr    NetAddress `env:"ADDRESS"`
 	StoreInterval uint       `env:"STORE_INTERVAL"`
@@ -95,6 +97,9 @@ func setServerDefaultValues(cfg *ServerConfig) {
 	if cfg.Key == "" {
 		cfg.Key = flagServerKey
 	}
+	if cfg.CertFile == "" {
+		cfg.CertFile = defaultServerConfig.CertFile
+	}
 
 	cfg.Delays = defaultServerConfig.Delays
 }
@@ -120,10 +125,12 @@ var defaultAgentConfig = &AgentConfig{
 	RateLimit:      1,
 	Key:            "",
 	Delays:         []time.Duration{time.Second, 3 * time.Second, 5 * time.Second},
+	CertFile:       "",
 }
 
 // AgentConfig структура для конфигурации агента сбора метрик.
 type AgentConfig struct {
+	CertFile       string     `env:"CRYPTO_KEY"`
 	Key            string     `env:"KEY"`
 	ServerAddr     NetAddress `env:"ADDRESS"`
 	Delays         []time.Duration
@@ -161,6 +168,9 @@ func setAgentDefaultValues(cfg *AgentConfig) {
 
 	if cfg.RateLimit == 0 {
 		cfg.RateLimit = defaultAgentConfig.RateLimit
+	}
+	if cfg.CertFile == "" {
+		cfg.CertFile = defaultAgentConfig.CertFile
 	}
 }
 

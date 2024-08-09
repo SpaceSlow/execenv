@@ -34,8 +34,9 @@ func Test_getServerConfigWithFlags(t *testing.T) {
 				"RESTORE":           "false",
 				"DATABASE_DSN":      "postgres://env:env@localhost:5432/env",
 				"KEY":               "env",
+				"CRYPTO_KEY":        "/tmp/cert.env.pem",
 			},
-			flags: []string{"-a=:8080", "-f=/tmp/flag", "-i=0", "-r", "-d=postgres://flag:flag@localhost:5432/flag", "-k=flag"},
+			flags: []string{"-a=:8080", "-f=/tmp/flag", "-i=0", "-r", "-d=postgres://flag:flag@localhost:5432/flag", "-k=flag", "-crypto-key=/tmp/cert.flag.pem"},
 			want: &ServerConfig{
 				StoragePath:   "/tmp/env",
 				DatabaseDSN:   "postgres://env:env@localhost:5432/env",
@@ -44,6 +45,7 @@ func Test_getServerConfigWithFlags(t *testing.T) {
 				ServerAddr:    NetAddress{Host: "", Port: 9090},
 				StoreInterval: 100,
 				NeededRestore: false,
+				CertFile:      "/tmp/cert.env.pem",
 			},
 		},
 	}
@@ -87,8 +89,9 @@ func Test_getAgentConfigWithFlags(t *testing.T) {
 				"POLL_INTERVAL":   "1",
 				"RATE_LIMIT":      "10",
 				"KEY":             "env",
+				"CRYPTO_KEY":      "/tmp/cert.env.pem",
 			},
-			flags: []string{"-a=:8080", "-r=55", "-p=11", "-l=100", "-k=flag"},
+			flags: []string{"-a=:8080", "-r=55", "-p=11", "-l=100", "-k=flag", "-crypto-key=/tmp/cert.flag.pem"},
 			want: &AgentConfig{
 				ServerAddr:     NetAddress{Host: "", Port: 9090},
 				ReportInterval: 5,
@@ -96,6 +99,7 @@ func Test_getAgentConfigWithFlags(t *testing.T) {
 				RateLimit:      10,
 				Key:            "env",
 				Delays:         defaultServerConfig.Delays,
+				CertFile:       "/tmp/cert.env.pem",
 			},
 		},
 	}
