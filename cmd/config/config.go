@@ -1,6 +1,9 @@
 package config
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"os"
 	"sync"
@@ -63,6 +66,27 @@ type ServerConfig struct {
 	ServerAddr    NetAddress `env:"ADDRESS"`
 	StoreInterval uint       `env:"STORE_INTERVAL"`
 	NeededRestore bool       `env:"RESTORE"`
+	privateKey    *rsa.PrivateKey
+}
+
+func (c *ServerConfig) setPrivateKey() error {
+	if c.CertFile == "" {
+		return nil
+	}
+	keyBytes, err := os.ReadFile(c.CertFile)
+	if err != nil {
+		return err
+	}
+	keyBlock, _ := pem.Decode(keyBytes)
+	c.privateKey, err = x509.ParsePKCS1PrivateKey(keyBlock.Bytes)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *ServerConfig) PrivateKey() *rsa.PrivateKey {
+	return c.privateKey
 }
 
 var serverConfig *ServerConfig = nil
@@ -112,6 +136,11 @@ func getServerConfigWithFlags(programName string, args []string) (*ServerConfig,
 		return nil, fmt.Errorf("parse config from env: %w", err)
 	}
 	setServerDefaultValues(cfg)
+	err := cfg.setPrivateKey()
+	if err != nil {
+		return nil, err
+	}
+	// TODO setting private key to ServerConfig and fixed tests
 	return cfg, nil
 }
 

@@ -46,6 +46,7 @@ func main() {
 	config.PrintBuildInfo()
 	middlewareHandlers := []func(next http.Handler) http.Handler{
 		middlewares.WithSigning,
+		middlewares.WithDecryption,
 		middlewares.WithCompressing,
 		middlewares.WithLogging,
 	}
