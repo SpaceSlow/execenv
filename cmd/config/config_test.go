@@ -48,6 +48,20 @@ func Test_getServerConfigWithFlags(t *testing.T) {
 				CertFile:      "/tmp/cert.env.pem",
 			},
 		},
+		{
+			name:  "only flags",
+			flags: []string{"-a=:8080", "-f=/tmp/flag", "-i=0", "-r", "-d=postgres://flag:flag@localhost:5432/flag", "-k=flag", "-crypto-key=/tmp/cert.flag.pem"},
+			want: &ServerConfig{
+				StoragePath:   "/tmp/flag",
+				DatabaseDSN:   "postgres://flag:flag@localhost:5432/flag",
+				Key:           "flag",
+				Delays:        defaultServerConfig.Delays,
+				ServerAddr:    NetAddress{Host: "", Port: 8080},
+				StoreInterval: 0,
+				NeededRestore: true,
+				CertFile:      "/tmp/cert.flag.pem",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -100,6 +114,19 @@ func Test_getAgentConfigWithFlags(t *testing.T) {
 				Key:            "env",
 				Delays:         defaultServerConfig.Delays,
 				CertFile:       "/tmp/cert.env.pem",
+			},
+		},
+		{
+			name:  "only flags",
+			flags: []string{"-a=:8080", "-r=55", "-p=11", "-l=100", "-k=flag", "-crypto-key=/tmp/cert.flag.pem"},
+			want: &AgentConfig{
+				ServerAddr:     NetAddress{Host: "", Port: 8080},
+				ReportInterval: 55,
+				PollInterval:   11,
+				RateLimit:      100,
+				Key:            "flag",
+				Delays:         defaultServerConfig.Delays,
+				CertFile:       "/tmp/cert.flag.pem",
 			},
 		},
 	}

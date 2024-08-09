@@ -98,7 +98,7 @@ func setServerDefaultValues(cfg *ServerConfig) {
 		cfg.Key = flagServerKey
 	}
 	if cfg.CertFile == "" {
-		cfg.CertFile = defaultServerConfig.CertFile
+		cfg.CertFile = flagServerCertFile
 	}
 
 	cfg.Delays = defaultServerConfig.Delays
@@ -152,25 +152,25 @@ func GetAgentConfig() (*AgentConfig, error) {
 
 func setAgentDefaultValues(cfg *AgentConfig) {
 	if cfg.ReportInterval == 0 {
-		cfg.ReportInterval = defaultAgentConfig.ReportInterval
+		cfg.ReportInterval = flagAgentReportInterval
 	}
 	if cfg.PollInterval == 0 {
-		cfg.PollInterval = defaultAgentConfig.PollInterval
+		cfg.PollInterval = flagAgentPollInterval
 	}
 	if cfg.ServerAddr.String() == "" {
-		cfg.ServerAddr = defaultAgentConfig.ServerAddr
+		cfg.ServerAddr = flagAgentServerAddr
 	}
 	if cfg.Key == "" {
-		cfg.Key = defaultAgentConfig.Key
+		cfg.Key = flagAgentKey
 	}
 
 	cfg.Delays = defaultAgentConfig.Delays
 
 	if cfg.RateLimit == 0 {
-		cfg.RateLimit = defaultAgentConfig.RateLimit
+		cfg.RateLimit = flagAgentRateLimit
 	}
 	if cfg.CertFile == "" {
-		cfg.CertFile = defaultAgentConfig.CertFile
+		cfg.CertFile = flagAgentCertFile
 	}
 }
 
