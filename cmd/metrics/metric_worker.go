@@ -1,11 +1,17 @@
 package metrics
 
 import (
+	crand "crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
+	"fmt"
 	"math/rand"
 	"net/http"
+	"os"
 	"runtime"
 	"sync/atomic"
 	"time"
@@ -21,23 +27,44 @@ type MetricWorkers struct {
 
 	url       string
 	key       string
+	cert      *rsa.PublicKey
 	delays    []time.Duration
 	pollCount atomic.Int64
 }
 
-func NewMetricWorkers(numWorkers int, url, key string, delays []time.Duration) *MetricWorkers {
+func NewMetricWorkers(numWorkers int, url, key, certFile string, delays []time.Duration) (*MetricWorkers, error) {
+	var (
+		cert *rsa.PublicKey
+		err  error
+	)
+	if certFile != "" {
+		cert, err = getPublicKey(certFile)
+		if err != nil {
+			return nil, fmt.Errorf("extract public key from file error: %w", err)
+		}
+	}
 	return &MetricWorkers{
 		metricsForSend: make(chan []Metric, numWorkers),
 		errorsCh:       make(chan error, numWorkers),
 		url:            url,
 		key:            key,
+		cert:           cert,
 		delays:         delays,
+	}, nil
+}
+
+func getPublicKey(file string) (*rsa.PublicKey, error) {
+	certBytes, err := os.ReadFile(file)
+	if err != nil {
+		return nil, err
 	}
+	certBlock, _ := pem.Decode(certBytes)
+	return x509.ParsePKCS1PublicKey(certBlock.Bytes)
 }
 
 func (mw *MetricWorkers) Send(metrics []Metric) {
 	pollCount := mw.pollCount.Load()
-	jsonMetric, err := json.Marshal(metrics)
+	data, err := json.Marshal(metrics)
 	if err != nil {
 		mw.errorsCh <- err
 		return
@@ -46,11 +73,19 @@ func (mw *MetricWorkers) Send(metrics []Metric) {
 	var hash string
 	if mw.key != "" {
 		h := sha256.New()
-		h.Write(jsonMetric)
+		h.Write(data)
 		hash = hex.EncodeToString(h.Sum([]byte(mw.key)))
 	}
 
-	req, err := newCompressedRequest(http.MethodPost, mw.url, jsonMetric)
+	if mw.cert != nil {
+		data, err = rsa.EncryptPKCS1v15(crand.Reader, mw.cert, data)
+		if err != nil {
+			mw.errorsCh <- err
+			return
+		}
+	}
+
+	req, err := newCompressedRequest(http.MethodPost, mw.url, data)
 	if err != nil {
 		mw.errorsCh <- err
 		return

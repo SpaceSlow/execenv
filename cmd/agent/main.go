@@ -24,7 +24,10 @@ func main() {
 
 	pollTick := time.Tick(pollInterval)
 	reportTick := time.Tick(reportInterval)
-	metricWorkers := metrics.NewMetricWorkers(cfg.RateLimit, url, cfg.Key, cfg.Delays)
+	metricWorkers, err := metrics.NewMetricWorkers(cfg.RateLimit, url, cfg.Key, cfg.CertFile, cfg.Delays)
+	if err != nil {
+		log.Fatalf("stopped agent: %s", err)
+	}
 	sendCh := make(chan []metrics.Metric, cfg.RateLimit)
 	pollCh := make(chan []metrics.Metric, 1)
 
