@@ -96,6 +96,10 @@ func GetServerConfig() (*ServerConfig, error) {
 	var err error
 	sync.OnceFunc(func() {
 		serverConfig, err = getServerConfigWithFlags(os.Args[0], os.Args[1:])
+		if err != nil {
+			return
+		}
+		err = serverConfig.setPrivateKey()
 	})()
 	return serverConfig, err
 }
@@ -136,11 +140,6 @@ func getServerConfigWithFlags(programName string, args []string) (*ServerConfig,
 		return nil, fmt.Errorf("parse config from env: %w", err)
 	}
 	setServerDefaultValues(cfg)
-	err := cfg.setPrivateKey()
-	if err != nil {
-		return nil, err
-	}
-	// TODO setting private key to ServerConfig and fixed tests
 	return cfg, nil
 }
 
