@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"bytes"
 	crand "crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -77,6 +78,12 @@ func (mw *MetricWorkers) Send(metrics []Metric) {
 		hash = hex.EncodeToString(h.Sum([]byte(mw.key)))
 	}
 
+	data, err = compress(data)
+	if err != nil {
+		mw.errorsCh <- err
+		return
+	}
+
 	if mw.cert != nil {
 		data, err = rsa.EncryptPKCS1v15(crand.Reader, mw.cert, data)
 		if err != nil {
@@ -85,11 +92,12 @@ func (mw *MetricWorkers) Send(metrics []Metric) {
 		}
 	}
 
-	req, err := newCompressedRequest(http.MethodPost, mw.url, data)
+	req, err := http.NewRequest(http.MethodPost, mw.url, bytes.NewReader(data))
 	if err != nil {
 		mw.errorsCh <- err
 		return
 	}
+	setCompressHeader(req)
 
 	if hash != "" {
 		req.Header.Set("Hash", hash)

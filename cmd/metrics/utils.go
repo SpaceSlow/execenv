@@ -30,7 +30,7 @@ func RetryFunc(f func() error, delays []time.Duration) chan error {
 	return errorCh
 }
 
-func newCompressedRequest(method, url string, data []byte) (*http.Request, error) {
+func compress(data []byte) ([]byte, error) {
 	var b bytes.Buffer
 	w, err := gzip.NewWriterLevel(&b, gzip.BestCompression)
 	if err != nil {
@@ -44,14 +44,12 @@ func newCompressedRequest(method, url string, data []byte) (*http.Request, error
 	if err != nil {
 		return nil, fmt.Errorf("failed compress data: %w", err)
 	}
-	req, err := http.NewRequest(method, url, &b)
-	if err != nil {
-		return nil, err
-	}
+	return b.Bytes(), nil
+}
+
+func setCompressHeader(req *http.Request) {
 	req.Header.Set("Content-Encoding", "gzip")
 	req.Header.Set("Content-Type", "application/json")
-
-	return req, nil
 }
 
 func fanIn(chs ...chan []Metric) chan []Metric {
