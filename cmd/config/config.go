@@ -63,10 +63,10 @@ type ServerConfig struct {
 	Key           string `env:"KEY"`
 	CertFile      string `env:"CRYPTO_KEY"`
 	Delays        []time.Duration
+	privateKey    *rsa.PrivateKey
 	ServerAddr    NetAddress `env:"ADDRESS"`
 	StoreInterval uint       `env:"STORE_INTERVAL"`
 	NeededRestore bool       `env:"RESTORE"`
-	privateKey    *rsa.PrivateKey
 }
 
 func (c *ServerConfig) setPrivateKey() error {

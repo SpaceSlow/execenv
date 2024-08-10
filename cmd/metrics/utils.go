@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
-	"net/http"
 	"sync"
 	"time"
 )
@@ -45,11 +44,6 @@ func compress(data []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed compress data: %w", err)
 	}
 	return b.Bytes(), nil
-}
-
-func setCompressHeader(req *http.Request) {
-	req.Header.Set("Content-Encoding", "gzip")
-	req.Header.Set("Content-Type", "application/json")
 }
 
 func fanIn(chs ...chan []Metric) chan []Metric {

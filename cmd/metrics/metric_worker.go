@@ -97,7 +97,8 @@ func (mw *MetricWorkers) Send(metrics []Metric) {
 		mw.errorsCh <- err
 		return
 	}
-	setCompressHeader(req)
+	req.Header.Set("Content-Encoding", "gzip")
+	req.Header.Set("Content-Type", "application/json")
 
 	if hash != "" {
 		req.Header.Set("Hash", hash)
