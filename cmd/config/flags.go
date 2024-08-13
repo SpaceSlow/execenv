@@ -10,6 +10,7 @@ var (
 	flagServerDatabaseDSN   string
 	flagServerKey           string
 	flagServerCertFile      string
+	flagServerConfigFile    string
 )
 
 func parseServerFlags(programName string, args []string) {
@@ -23,6 +24,9 @@ func parseServerFlags(programName string, args []string) {
 	flagSet.StringVar(&flagServerDatabaseDSN, "d", defaultServerConfig.DatabaseDSN, "PostgreSQL (ver. >=10) database DSN (example: postgres://username:password@localhost:5432/database_name")
 	flagSet.StringVar(&flagServerKey, "k", defaultServerConfig.Key, "key for signing queries")
 	flagSet.StringVar(&flagServerCertFile, "crypto-key", defaultServerConfig.CertFile, "path to cert file")
+
+	flagSet.StringVar(&flagServerConfigFile, "c", "", "config file path")
+	flagSet.StringVar(&flagServerConfigFile, "config", "", "config file path")
 
 	flagSet.Parse(args)
 }

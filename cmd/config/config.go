@@ -58,15 +58,16 @@ var defaultServerConfig = &ServerConfig{
 
 // ServerConfig структура для конфигурации сервера сбора метрик.
 type ServerConfig struct {
-	StoragePath   string `env:"FILE_STORAGE_PATH"`
-	DatabaseDSN   string `env:"DATABASE_DSN"`
-	Key           string `env:"KEY"`
-	CertFile      string `env:"CRYPTO_KEY"`
-	Delays        []time.Duration
-	privateKey    *rsa.PrivateKey
-	ServerAddr    NetAddress `env:"ADDRESS"`
-	StoreInterval uint       `env:"STORE_INTERVAL"`
-	NeededRestore bool       `env:"RESTORE"`
+	StoragePath    string `env:"FILE_STORAGE_PATH"`
+	DatabaseDSN    string `env:"DATABASE_DSN"`
+	Key            string `env:"KEY"`
+	CertFile       string `env:"CRYPTO_KEY"`
+	Delays         []time.Duration
+	privateKey     *rsa.PrivateKey
+	ServerAddr     NetAddress `env:"ADDRESS"`
+	StoreInterval  uint       `env:"STORE_INTERVAL"`
+	NeededRestore  bool       `env:"RESTORE"`
+	ConfigFilePath string     `env:"CONFIG"`
 }
 
 func (c *ServerConfig) setPrivateKey() error {
