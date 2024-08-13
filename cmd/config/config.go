@@ -3,6 +3,7 @@ package config
 import (
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"os"
@@ -90,6 +91,10 @@ func (c *ServerConfig) PrivateKey() *rsa.PrivateKey {
 	return c.privateKey
 }
 
+func (c *ServerConfig) Update(cfg *ServerConfig) {
+	// TODO
+}
+
 var serverConfig *ServerConfig = nil
 
 // GetServerConfig возвращает конфигурацию сервера на основании указанных флагов при запуске или указанных переменных окружения.
@@ -141,7 +146,39 @@ func getServerConfigWithFlags(programName string, args []string) (*ServerConfig,
 		return nil, fmt.Errorf("parse config from env: %w", err)
 	}
 	setServerDefaultValues(cfg)
+	fCfg, err := ParseServerConfig(cfg.ConfigFilePath)
+	if err != nil {
+		return nil, err
+	}
+	cfg.Update(fCfg)
+
 	return cfg, nil
+}
+
+func ParseServerConfig(path string) (*ServerConfig, error) {
+	if path == "" {
+		return nil, ErrEmptyPath
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var data []byte
+
+	_, err = file.Read(data)
+	if err != nil {
+		return nil, err
+	}
+
+	var cfg ServerConfig
+	err = json.Unmarshal(data, &cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
 }
 
 var defaultAgentConfig = &AgentConfig{
