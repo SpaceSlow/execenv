@@ -60,16 +60,16 @@ var defaultServerConfig = &ServerConfig{
 
 // ServerConfig структура для конфигурации сервера сбора метрик.
 type ServerConfig struct {
-	StoragePath    string `env:"FILE_STORAGE_PATH" json:"store_file"`
-	DatabaseDSN    string `env:"DATABASE_DSN" json:"database_dsn"`
-	Key            string `env:"KEY"`
-	CertFile       string `env:"CRYPTO_KEY" json:"crypto_key"`
+	StoragePath    string `env:"FILE_STORAGE_PATH" envDefault:"/tmp/metrics-db.json" json:"store_file"`
+	DatabaseDSN    string `env:"DATABASE_DSN" envDefault:"" json:"database_dsn"`
+	Key            string `env:"KEY" envDefault:""`
+	CertFile       string `env:"CRYPTO_KEY" envDefault:"" json:"crypto_key"`
 	Delays         []time.Duration
 	privateKey     *rsa.PrivateKey
-	ServerAddr     NetAddress    `env:"ADDRESS" json:"address"`
-	StoreInterval  time.Duration `env:"STORE_INTERVAL" json:"store_interval"`
-	NeededRestore  bool          `env:"RESTORE" json:"restore"`
-	ConfigFilePath string        `env:"CONFIG"`
+	ServerAddr     NetAddress    `env:"ADDRESS" envDefault:"localhost:8080" json:"address"`
+	StoreInterval  time.Duration `env:"STORE_INTERVAL" envDefault:"300s" json:"store_interval"`
+	NeededRestore  bool          `env:"RESTORE" envDefault:"true" json:"restore"`
+	ConfigFilePath string        `env:"CONFIG" envDefault:""`
 }
 
 func (c *ServerConfig) setPrivateKey() error {
@@ -150,11 +150,11 @@ func getServerConfigWithFlags(programName string, args []string) (*ServerConfig,
 	if err := env.Parse(cfg); err != nil {
 		return nil, fmt.Errorf("parse config from env: %w", err)
 	}
-	setServerFlagValues(cfg)
 	fCfg, err := ParseServerConfig(cfg.ConfigFilePath)
 	if err != nil && !errors.Is(err, ErrEmptyPath) {
 		return nil, err
 	}
+	setServerFlagValues(cfg)
 	cfg.UpdateDefaultFields(fCfg)
 
 	return cfg, nil
@@ -169,13 +169,13 @@ func ParseServerConfig(path string) (*ServerConfig, error) {
 		return nil, err
 	}
 
-	var cfg ServerConfig
-	err = json.Unmarshal(data, &cfg) // TODO fix time.Duration unmarshalling
+	cfg := defaultServerConfig
+	err = json.Unmarshal(data, cfg) // TODO fix time.Duration unmarshalling
 	if err != nil {
 		return nil, err
 	}
 
-	return &cfg, nil
+	return cfg, nil
 }
 
 var defaultAgentConfig = &AgentConfig{
