@@ -23,7 +23,7 @@ type MemFileStorage struct {
 	isSyncStore bool
 }
 
-func NewMemFileStorage(filename string, storePerSeconds uint, neededRestore bool) (*MemFileStorage, error) {
+func NewMemFileStorage(filename string, storePerSeconds time.Duration, neededRestore bool) (*MemFileStorage, error) {
 	storage := &MemFileStorage{
 		MemStorage: NewMemStorage(),
 		f:          nil,
@@ -125,17 +125,16 @@ func (s *MemFileStorage) LoadMetricsFromFile() error {
 	return nil
 }
 
-func (s *MemFileStorage) startStoreMetricsPerSecondsTask(secs uint) {
+func (s *MemFileStorage) startStoreMetricsPerSecondsTask(duration time.Duration) {
 	logger.Log.Info("start store metrics task")
 	closed := make(chan os.Signal, 1)
 	defer close(closed)
 	signal.Notify(closed, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
-	interval := time.Duration(secs) * time.Second
 	for {
 		select {
 		case <-closed:
 			logger.Log.Fatal("finish store metrics task")
-		case <-time.After(interval):
+		case <-time.After(duration):
 			err := s.SaveMetricsToFile()
 			if err != nil {
 				logger.Log.Error("not saved metrics")

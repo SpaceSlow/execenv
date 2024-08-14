@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -48,7 +49,7 @@ var defaultServerConfig = &ServerConfig{
 		Host: "localhost",
 		Port: 8080,
 	},
-	StoreInterval: 300,
+	StoreInterval: 300 * time.Second,
 	StoragePath:   "/tmp/metrics-db.json",
 	NeededRestore: true,
 	DatabaseDSN:   "",
@@ -59,16 +60,16 @@ var defaultServerConfig = &ServerConfig{
 
 // ServerConfig структура для конфигурации сервера сбора метрик.
 type ServerConfig struct {
-	StoragePath    string `env:"FILE_STORAGE_PATH"`
-	DatabaseDSN    string `env:"DATABASE_DSN"`
+	StoragePath    string `env:"FILE_STORAGE_PATH" json:"store_file"`
+	DatabaseDSN    string `env:"DATABASE_DSN" json:"database_dsn"`
 	Key            string `env:"KEY"`
-	CertFile       string `env:"CRYPTO_KEY"`
+	CertFile       string `env:"CRYPTO_KEY" json:"crypto_key"`
 	Delays         []time.Duration
 	privateKey     *rsa.PrivateKey
-	ServerAddr     NetAddress `env:"ADDRESS"`
-	StoreInterval  uint       `env:"STORE_INTERVAL"`
-	NeededRestore  bool       `env:"RESTORE"`
-	ConfigFilePath string     `env:"CONFIG"`
+	ServerAddr     NetAddress    `env:"ADDRESS" json:"address"`
+	StoreInterval  time.Duration `env:"STORE_INTERVAL" json:"store_interval"`
+	NeededRestore  bool          `env:"RESTORE" json:"restore"`
+	ConfigFilePath string        `env:"CONFIG"`
 }
 
 func (c *ServerConfig) setPrivateKey() error {
@@ -91,8 +92,8 @@ func (c *ServerConfig) PrivateKey() *rsa.PrivateKey {
 	return c.privateKey
 }
 
-func (c *ServerConfig) Update(cfg *ServerConfig) {
-	// TODO
+func (c *ServerConfig) UpdateDefaultFields(cfg *ServerConfig) {
+	// TODO checking c.field == defaultConfig.field then update from cfg
 }
 
 var serverConfig *ServerConfig = nil
@@ -110,8 +111,8 @@ func GetServerConfig() (*ServerConfig, error) {
 	return serverConfig, err
 }
 
-func setServerDefaultValues(cfg *ServerConfig) {
-	if cfg.ServerAddr.String() == "" {
+func setServerFlagValues(cfg *ServerConfig) {
+	if _, ok := os.LookupEnv("ADDRESS"); !ok {
 		cfg.ServerAddr = flagServerRunAddr
 	}
 	if _, ok := os.LookupEnv("STORE_INTERVAL"); !ok {
@@ -128,11 +129,15 @@ func setServerDefaultValues(cfg *ServerConfig) {
 		cfg.DatabaseDSN = flagServerDatabaseDSN
 	}
 
-	if cfg.Key == "" {
+	if _, ok := os.LookupEnv("KEY"); !ok {
 		cfg.Key = flagServerKey
 	}
-	if cfg.CertFile == "" {
+	if _, ok := os.LookupEnv("CRYPTO_KEY"); !ok {
 		cfg.CertFile = flagServerCertFile
+	}
+
+	if _, ok := os.LookupEnv("CONFIG"); !ok {
+		cfg.ConfigFilePath = flagServerConfigFile
 	}
 
 	cfg.Delays = defaultServerConfig.Delays
@@ -145,12 +150,12 @@ func getServerConfigWithFlags(programName string, args []string) (*ServerConfig,
 	if err := env.Parse(cfg); err != nil {
 		return nil, fmt.Errorf("parse config from env: %w", err)
 	}
-	setServerDefaultValues(cfg)
+	setServerFlagValues(cfg)
 	fCfg, err := ParseServerConfig(cfg.ConfigFilePath)
-	if err != nil {
+	if err != nil && !errors.Is(err, ErrEmptyPath) {
 		return nil, err
 	}
-	cfg.Update(fCfg)
+	cfg.UpdateDefaultFields(fCfg)
 
 	return cfg, nil
 }
@@ -159,21 +164,13 @@ func ParseServerConfig(path string) (*ServerConfig, error) {
 	if path == "" {
 		return nil, ErrEmptyPath
 	}
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	var data []byte
-
-	_, err = file.Read(data)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
 	var cfg ServerConfig
-	err = json.Unmarshal(data, &cfg)
+	err = json.Unmarshal(data, &cfg) // TODO fix time.Duration unmarshalling
 	if err != nil {
 		return nil, err
 	}
@@ -186,8 +183,8 @@ var defaultAgentConfig = &AgentConfig{
 		Host: "localhost",
 		Port: 8080,
 	},
-	ReportInterval: 10,
-	PollInterval:   2,
+	ReportInterval: 10 * time.Second,
+	PollInterval:   2 * time.Second,
 	RateLimit:      1,
 	Key:            "",
 	Delays:         []time.Duration{time.Second, 3 * time.Second, 5 * time.Second},
@@ -200,9 +197,9 @@ type AgentConfig struct {
 	Key            string     `env:"KEY"`
 	ServerAddr     NetAddress `env:"ADDRESS"`
 	Delays         []time.Duration
-	ReportInterval int `env:"REPORT_INTERVAL"`
-	PollInterval   int `env:"POLL_INTERVAL"`
-	RateLimit      int `env:"RATE_LIMIT"`
+	ReportInterval time.Duration `env:"REPORT_INTERVAL"`
+	PollInterval   time.Duration `env:"POLL_INTERVAL"`
+	RateLimit      int           `env:"RATE_LIMIT"`
 }
 
 var agentConfig *AgentConfig = nil
@@ -217,13 +214,13 @@ func GetAgentConfig() (*AgentConfig, error) {
 }
 
 func setAgentDefaultValues(cfg *AgentConfig) {
-	if cfg.ReportInterval == 0 {
+	if _, ok := os.LookupEnv("REPORT_INTERVAL"); !ok {
 		cfg.ReportInterval = flagAgentReportInterval
 	}
-	if cfg.PollInterval == 0 {
+	if _, ok := os.LookupEnv("POLL_INTERVAL"); !ok {
 		cfg.PollInterval = flagAgentPollInterval
 	}
-	if cfg.ServerAddr.String() == "" {
+	if _, ok := os.LookupEnv("ADDRESS"); !ok {
 		cfg.ServerAddr = flagAgentServerAddr
 	}
 	if cfg.Key == "" {

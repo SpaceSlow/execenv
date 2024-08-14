@@ -2,6 +2,7 @@ package config
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -11,7 +12,7 @@ type wantServerFlags struct {
 	DatabaseDSN   string
 	Key           string
 	ServerAddr    NetAddress
-	StoreInterval uint
+	StoreInterval time.Duration
 	NeededRestore bool
 }
 
@@ -53,7 +54,7 @@ func Test_parseServerFlags(t *testing.T) {
 		{
 			name: "sync adding into file flag",
 			args: []string{
-				"-i=0",
+				"-i=0s",
 			},
 			wantFlags: wantServerFlags{
 				ServerAddr:    defaultServerConfig.ServerAddr,
@@ -124,7 +125,7 @@ func Test_parseServerFlags(t *testing.T) {
 			name: "all flags",
 			args: []string{
 				"-a=example.com:80",
-				"-i=10",
+				"-i=10s",
 				"-r",
 				"-f=/tmp/some-file.json",
 				"-k=non-standard-key",
@@ -135,7 +136,7 @@ func Test_parseServerFlags(t *testing.T) {
 					Host: "example.com",
 					Port: 80,
 				},
-				StoreInterval: 10,
+				StoreInterval: 10 * time.Second,
 				StoragePath:   "/tmp/some-file.json",
 				NeededRestore: true,
 				DatabaseDSN:   "postgres://username:password@localhost:5432/database_name",
@@ -163,8 +164,8 @@ func Test_parseServerFlags(t *testing.T) {
 type wantAgentFlags struct {
 	Key            string
 	ServerAddr     NetAddress
-	ReportInterval int
-	PollInterval   int
+	ReportInterval time.Duration
+	PollInterval   time.Duration
 	RateLimit      int
 }
 
@@ -173,8 +174,8 @@ var standardFlags = wantAgentFlags{
 		Host: "localhost",
 		Port: 8080,
 	},
-	ReportInterval: 10,
-	PollInterval:   2,
+	ReportInterval: 10 * time.Second,
+	PollInterval:   2 * time.Second,
 	RateLimit:      1,
 	Key:            "",
 }
@@ -215,11 +216,11 @@ func Test_parseAgentFlags(t *testing.T) {
 		{
 			name: "checking non-standard reporting interval flag",
 			args: []string{
-				"-r=30",
+				"-r=30s",
 			},
 			wantFlags: wantAgentFlags{
 				ServerAddr:     standardFlags.ServerAddr,
-				ReportInterval: 30,
+				ReportInterval: 30 * time.Second,
 				PollInterval:   standardFlags.PollInterval,
 				RateLimit:      standardFlags.RateLimit,
 				Key:            standardFlags.Key,
@@ -228,12 +229,12 @@ func Test_parseAgentFlags(t *testing.T) {
 		{
 			name: "checking non-standard polling interval flag",
 			args: []string{
-				"-p=2",
+				"-p=2s",
 			},
 			wantFlags: wantAgentFlags{
 				ServerAddr:     standardFlags.ServerAddr,
 				ReportInterval: standardFlags.ReportInterval,
-				PollInterval:   2,
+				PollInterval:   2 * time.Second,
 				RateLimit:      standardFlags.RateLimit,
 				Key:            standardFlags.Key,
 			},
@@ -269,8 +270,8 @@ func Test_parseAgentFlags(t *testing.T) {
 			args: []string{
 				"-a=example.com:80",
 				"-l=10",
-				"-r=5",
-				"-p=1",
+				"-r=5s",
+				"-p=1s",
 				"-k=non-standard-key",
 			},
 			wantFlags: wantAgentFlags{
@@ -278,8 +279,8 @@ func Test_parseAgentFlags(t *testing.T) {
 					Host: "example.com",
 					Port: 80,
 				},
-				ReportInterval: 5,
-				PollInterval:   1,
+				ReportInterval: 5 * time.Second,
+				PollInterval:   1 * time.Second,
 				RateLimit:      10,
 				Key:            "non-standard-key",
 			},

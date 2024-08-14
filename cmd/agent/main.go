@@ -19,11 +19,9 @@ func main() {
 	}
 
 	url := "http://" + cfg.ServerAddr.String() + "/updates/"
-	pollInterval := time.Duration(cfg.PollInterval) * time.Second
-	reportInterval := time.Duration(cfg.ReportInterval) * time.Second
 
-	pollTick := time.Tick(pollInterval)
-	reportTick := time.Tick(reportInterval)
+	pollTick := time.Tick(cfg.PollInterval)
+	reportTick := time.Tick(cfg.ReportInterval)
 	metricWorkers, err := metrics.NewMetricWorkers(cfg.RateLimit, url, cfg.Key, cfg.CertFile, cfg.Delays)
 	if err != nil {
 		log.Fatalf("stopped agent: %s", err)
