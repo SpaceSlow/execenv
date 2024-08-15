@@ -137,7 +137,7 @@ func TestServerConfig_parseFlags(t *testing.T) {
 			require.NoError(t, err)
 
 			if !assert.ObjectsAreEqual(tt.wantCfg.ServerAddr, config.ServerAddr) {
-				t.Errorf("expected flagServerAddr: %v, got: %v", tt.wantCfg.ServerAddr, config.ServerAddr)
+				t.Errorf("expected ServerAddr: %v, got: %v", tt.wantCfg.ServerAddr, config.ServerAddr)
 			}
 			assert.Equalf(t, tt.wantCfg.StoragePath, config.StoragePath, `expected StoragePath: %v, got: %v`, tt.wantCfg.StoragePath, config.StoragePath)
 			assert.Equalf(t, tt.wantCfg.StoreInterval, config.StoreInterval, `expected StoreInterval: %v, got: %v`, tt.wantCfg.StoreInterval, config.StoreInterval)
@@ -230,7 +230,7 @@ func Test_getAgentConfigWithFlags(t *testing.T) {
 	}{
 		{
 			name: "standard config",
-			want: defaultAgentConfig,
+			want: &defaultAgentConfig,
 		},
 		{
 			name: "incorrect server address in envs",
@@ -252,8 +252,8 @@ func Test_getAgentConfigWithFlags(t *testing.T) {
 			flags: []string{"-a=:8080", "-r=55s", "-p=11s", "-l=100", "-k=flag", "-crypto-key=/tmp/cert.flag.pem"},
 			want: &AgentConfig{
 				ServerAddr:     NetAddress{Host: "", Port: 9090},
-				ReportInterval: 5 * time.Second,
-				PollInterval:   1 * time.Second,
+				ReportInterval: Duration{5 * time.Second},
+				PollInterval:   Duration{1 * time.Second},
 				RateLimit:      10,
 				Key:            "env",
 				Delays:         defaultServerConfig.Delays,
@@ -265,8 +265,8 @@ func Test_getAgentConfigWithFlags(t *testing.T) {
 			flags: []string{"-a=:8080", "-r=55s", "-p=11s", "-l=100", "-k=flag", "-crypto-key=/tmp/cert.flag.pem"},
 			want: &AgentConfig{
 				ServerAddr:     NetAddress{Host: "", Port: 8080},
-				ReportInterval: 55 * time.Second,
-				PollInterval:   11 * time.Second,
+				ReportInterval: Duration{55 * time.Second},
+				PollInterval:   Duration{11 * time.Second},
 				RateLimit:      100,
 				Key:            "flag",
 				Delays:         defaultServerConfig.Delays,
@@ -280,9 +280,144 @@ func Test_getAgentConfigWithFlags(t *testing.T) {
 				t.Setenv(k, v)
 			}
 
-			got, err := getAgentConfigWithFlags("program", tt.flags)
+			got, err := getAgentConfig("program", tt.flags)
 			assert.Equal(t, tt.wantErr, err != nil)
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+var standardFlags = AgentConfig{
+	ServerAddr: NetAddress{
+		Host: "localhost",
+		Port: 8080,
+	},
+	ReportInterval: Duration{10 * time.Second},
+	PollInterval:   Duration{2 * time.Second},
+	RateLimit:      1,
+	Key:            "",
+}
+
+func TestAgentConfig_parseFlags(t *testing.T) {
+	tests := []struct {
+		args    []string
+		name    string
+		wantCfg AgentConfig
+	}{
+		{
+			name: "checking standard flag values",
+			args: nil,
+			wantCfg: AgentConfig{
+				ServerAddr:     standardFlags.ServerAddr,
+				ReportInterval: standardFlags.ReportInterval,
+				PollInterval:   standardFlags.PollInterval,
+				RateLimit:      standardFlags.RateLimit,
+				Key:            standardFlags.Key,
+			},
+		},
+		{
+			name: "checking non-standard port flag",
+			args: []string{
+				"-a=:8081",
+			},
+			wantCfg: AgentConfig{
+				ServerAddr: NetAddress{
+					Host: "",
+					Port: 8081,
+				},
+				ReportInterval: standardFlags.ReportInterval,
+				PollInterval:   standardFlags.PollInterval,
+				RateLimit:      standardFlags.RateLimit,
+				Key:            standardFlags.Key,
+			},
+		},
+		{
+			name: "checking non-standard reporting interval flag",
+			args: []string{
+				"-r=30s",
+			},
+			wantCfg: AgentConfig{
+				ServerAddr:     standardFlags.ServerAddr,
+				ReportInterval: Duration{30 * time.Second},
+				PollInterval:   standardFlags.PollInterval,
+				RateLimit:      standardFlags.RateLimit,
+				Key:            standardFlags.Key,
+			},
+		},
+		{
+			name: "checking non-standard polling interval flag",
+			args: []string{
+				"-p=2s",
+			},
+			wantCfg: AgentConfig{
+				ServerAddr:     standardFlags.ServerAddr,
+				ReportInterval: standardFlags.ReportInterval,
+				PollInterval:   Duration{2 * time.Second},
+				RateLimit:      standardFlags.RateLimit,
+				Key:            standardFlags.Key,
+			},
+		},
+		{
+			name: "checking non-standard rate limit flag",
+			args: []string{
+				"-l=3",
+			},
+			wantCfg: AgentConfig{
+				ServerAddr:     standardFlags.ServerAddr,
+				ReportInterval: standardFlags.ReportInterval,
+				PollInterval:   standardFlags.PollInterval,
+				RateLimit:      3,
+				Key:            standardFlags.Key,
+			},
+		},
+		{
+			name: "checking setting non-empty key flag",
+			args: []string{
+				"-k=non-standard-key",
+			},
+			wantCfg: AgentConfig{
+				ServerAddr:     standardFlags.ServerAddr,
+				ReportInterval: standardFlags.ReportInterval,
+				PollInterval:   standardFlags.PollInterval,
+				RateLimit:      standardFlags.RateLimit,
+				Key:            "non-standard-key",
+			},
+		},
+		{
+			name: "checking all flags",
+			args: []string{
+				"-a=example.com:80",
+				"-l=10",
+				"-r=5s",
+				"-p=1s",
+				"-k=non-standard-key",
+			},
+			wantCfg: AgentConfig{
+				ServerAddr: NetAddress{
+					Host: "example.com",
+					Port: 80,
+				},
+				ReportInterval: Duration{5 * time.Second},
+				PollInterval:   Duration{1 * time.Second},
+				RateLimit:      10,
+				Key:            "non-standard-key",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := defaultAgentConfig
+			err := config.parseFlags("program", tt.args)
+			require.NoError(t, err)
+
+			if !assert.ObjectsAreEqual(tt.wantCfg.ServerAddr, config.ServerAddr) {
+				t.Errorf("expected ServerAddr: %v, got: %v", tt.wantCfg.ServerAddr, config.ServerAddr)
+			}
+			assert.Equalf(t, tt.wantCfg.ReportInterval, config.ReportInterval, `expected ReportInterval: %v, got: %v`, tt.wantCfg.ReportInterval, config.ReportInterval)
+			assert.Equalf(t, tt.wantCfg.PollInterval, config.PollInterval, `expected PollInterval: %v, got: %v`, tt.wantCfg.PollInterval, config.PollInterval)
+			assert.Equalf(t, tt.wantCfg.RateLimit, config.RateLimit, `expected RateLimit: %v, got: %v`, tt.wantCfg.RateLimit, config.RateLimit)
+			assert.Equalf(t, tt.wantCfg.Key, config.Key, `expected Key: "%v", got: "%v"`, tt.wantCfg.Key, config.Key)
 		})
 	}
 }

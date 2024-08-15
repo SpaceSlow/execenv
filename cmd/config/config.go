@@ -181,13 +181,13 @@ func getServerConfig(programName string, args []string) (*ServerConfig, error) {
 	return &cfg, nil
 }
 
-var defaultAgentConfig = &AgentConfig{
+var defaultAgentConfig = AgentConfig{
 	ServerAddr: NetAddress{
 		Host: "localhost",
 		Port: 8080,
 	},
-	ReportInterval: 10 * time.Second,
-	PollInterval:   2 * time.Second,
+	ReportInterval: Duration{10 * time.Second},
+	PollInterval:   Duration{2 * time.Second},
 	RateLimit:      1,
 	Key:            "",
 	Delays:         []time.Duration{time.Second, 3 * time.Second, 5 * time.Second},
@@ -198,11 +198,54 @@ var defaultAgentConfig = &AgentConfig{
 type AgentConfig struct {
 	CertFile       string     `env:"CRYPTO_KEY"`
 	Key            string     `env:"KEY"`
+	ConfigFilePath string     `env:"CONFIG"`
 	ServerAddr     NetAddress `env:"ADDRESS"`
 	Delays         []time.Duration
-	ReportInterval time.Duration `env:"REPORT_INTERVAL"`
-	PollInterval   time.Duration `env:"POLL_INTERVAL"`
-	RateLimit      int           `env:"RATE_LIMIT"`
+	ReportInterval Duration `env:"REPORT_INTERVAL"`
+	PollInterval   Duration `env:"POLL_INTERVAL"`
+	RateLimit      int      `env:"RATE_LIMIT"`
+}
+
+func (c *AgentConfig) parseFlags(programName string, args []string) error {
+	flagSet := flag.NewFlagSet(programName, flag.ContinueOnError)
+
+	flagSet.Var(&c.ServerAddr, "a", "address and port server")
+	flagSet.DurationVar(&c.ReportInterval.Duration, "r", c.ReportInterval.Duration, "interval in seconds of sending metrics to server")
+	flagSet.DurationVar(&c.PollInterval.Duration, "p", c.PollInterval.Duration, "interval in seconds of polling metrics")
+	flagSet.StringVar(&c.Key, "k", c.Key, "key for signing queries")
+	flagSet.IntVar(&c.RateLimit, "l", c.RateLimit, "rate limit outgoing requests to the server")
+	flagSet.StringVar(&c.CertFile, "crypto-key", c.CertFile, "path to cert file")
+
+	err := flagSet.Parse(args)
+	if err != nil {
+		return fmt.Errorf("parse config from flags: %w", err)
+	}
+	return nil
+}
+
+func (c *AgentConfig) parseEnv() error {
+	if err := env.Parse(c); err != nil {
+		return fmt.Errorf("parse config from env: %w", err)
+	}
+
+	return nil
+}
+
+func (c *AgentConfig) parseFile(path string) error {
+	if path == "" {
+		return ErrEmptyPath
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("parse config from file: %w", err)
+	}
+
+	err = json.Unmarshal(data, c)
+	if err != nil {
+		return fmt.Errorf("parse config from file: %w", err)
+	}
+
+	return nil
 }
 
 var agentConfig *AgentConfig = nil
@@ -211,42 +254,34 @@ var agentConfig *AgentConfig = nil
 func GetAgentConfig() (*AgentConfig, error) {
 	var err error
 	sync.OnceFunc(func() {
-		agentConfig, err = getAgentConfigWithFlags(os.Args[0], os.Args[1:])
+		agentConfig, err = getAgentConfig(os.Args[0], os.Args[1:])
 	})()
 	return agentConfig, err
 }
 
-func setAgentDefaultValues(cfg *AgentConfig) {
-	if _, ok := os.LookupEnv("REPORT_INTERVAL"); !ok {
-		cfg.ReportInterval = flagAgentReportInterval
-	}
-	if _, ok := os.LookupEnv("POLL_INTERVAL"); !ok {
-		cfg.PollInterval = flagAgentPollInterval
-	}
-	if _, ok := os.LookupEnv("ADDRESS"); !ok {
-		cfg.ServerAddr = flagAgentServerAddr
-	}
-	if cfg.Key == "" {
-		cfg.Key = flagAgentKey
+func getAgentConfig(programName string, args []string) (*AgentConfig, error) {
+	tmpCfg := defaultAgentConfig
+
+	if err := tmpCfg.parseFlags(programName, args); err != nil {
+		return nil, err
 	}
 
-	cfg.Delays = defaultAgentConfig.Delays
-
-	if cfg.RateLimit == 0 {
-		cfg.RateLimit = flagAgentRateLimit
+	if err := tmpCfg.parseEnv(); err != nil {
+		return nil, err
 	}
-	if cfg.CertFile == "" {
-		cfg.CertFile = flagAgentCertFile
-	}
-}
 
-func getAgentConfigWithFlags(programName string, args []string) (*AgentConfig, error) {
-	parseAgentFlags(programName, args)
-	cfg := &AgentConfig{}
-
-	if err := env.Parse(cfg); err != nil {
-		return nil, fmt.Errorf("parse config from env: %w", err)
+	cfg := defaultAgentConfig
+	if err := cfg.parseFile(tmpCfg.ConfigFilePath); err != nil && !errors.Is(err, ErrEmptyPath) {
+		return nil, err
 	}
-	setAgentDefaultValues(cfg)
-	return cfg, nil
+
+	if err := cfg.parseFlags(programName, args); err != nil {
+		return nil, err
+	}
+
+	if err := cfg.parseEnv(); err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
 }
