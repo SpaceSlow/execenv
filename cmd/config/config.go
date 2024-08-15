@@ -44,7 +44,7 @@ func PrintBuildInfo() {
 	fmt.Println("Build commit:", buildCommit)
 }
 
-var defaultServerConfig = &ServerConfig{
+var defaultServerConfig = ServerConfig{
 	ServerAddr: NetAddress{
 		Host: "localhost",
 		Port: 8080,
@@ -60,16 +60,16 @@ var defaultServerConfig = &ServerConfig{
 
 // ServerConfig структура для конфигурации сервера сбора метрик.
 type ServerConfig struct {
-	StoragePath    string `env:"FILE_STORAGE_PATH" envDefault:"/tmp/metrics-db.json" json:"store_file"`
-	DatabaseDSN    string `env:"DATABASE_DSN" envDefault:"" json:"database_dsn"`
-	Key            string `env:"KEY" envDefault:""`
-	CertFile       string `env:"CRYPTO_KEY" envDefault:"" json:"crypto_key"`
+	StoragePath    string `env:"FILE_STORAGE_PATH" json:"store_file"`
+	DatabaseDSN    string `env:"DATABASE_DSN" json:"database_dsn"`
+	Key            string `env:"KEY"`
+	CertFile       string `env:"CRYPTO_KEY" json:"crypto_key"`
 	Delays         []time.Duration
 	privateKey     *rsa.PrivateKey
-	ServerAddr     NetAddress    `env:"ADDRESS" envDefault:"localhost:8080" json:"address"`
-	StoreInterval  time.Duration `env:"STORE_INTERVAL" envDefault:"300s" json:"store_interval"`
-	NeededRestore  bool          `env:"RESTORE" envDefault:"true" json:"restore"`
-	ConfigFilePath string        `env:"CONFIG" envDefault:""`
+	ServerAddr     NetAddress    `env:"ADDRESS" json:"address"`
+	StoreInterval  time.Duration `env:"STORE_INTERVAL" json:"store_interval"`
+	NeededRestore  bool          `env:"RESTORE" json:"restore"`
+	ConfigFilePath string        `env:"CONFIG"`
 }
 
 func (c *ServerConfig) setPrivateKey() error {
@@ -92,17 +92,13 @@ func (c *ServerConfig) PrivateKey() *rsa.PrivateKey {
 	return c.privateKey
 }
 
-func (c *ServerConfig) UpdateDefaultFields(cfg *ServerConfig) {
-	// TODO checking c.field == defaultConfig.field then update from cfg
-}
-
 var serverConfig *ServerConfig = nil
 
 // GetServerConfig возвращает конфигурацию сервера на основании указанных флагов при запуске или указанных переменных окружения.
 func GetServerConfig() (*ServerConfig, error) {
 	var err error
 	sync.OnceFunc(func() {
-		serverConfig, err = getServerConfigWithFlags(os.Args[0], os.Args[1:])
+		serverConfig, err = getServerConfig(os.Args[0], os.Args[1:])
 		if err != nil {
 			return
 		}
@@ -111,68 +107,58 @@ func GetServerConfig() (*ServerConfig, error) {
 	return serverConfig, err
 }
 
-func setServerFlagValues(cfg *ServerConfig) {
-	if _, ok := os.LookupEnv("ADDRESS"); !ok {
-		cfg.ServerAddr = flagServerRunAddr
-	}
-	if _, ok := os.LookupEnv("STORE_INTERVAL"); !ok {
-		cfg.StoreInterval = flagServerStoreInterval
-	}
-	if _, ok := os.LookupEnv("FILE_STORAGE_PATH"); !ok {
-		cfg.StoragePath = flagServerStoragePath
-	}
-	if _, ok := os.LookupEnv("RESTORE"); !ok {
-		cfg.NeededRestore = flagServerNeedRestore
+func getServerConfig(programName string, args []string) (*ServerConfig, error) {
+	flagCfg, err := ParseFlagsServerConfig(programName, args, nil)
+	if err != nil {
+		return nil, err
 	}
 
-	if _, ok := os.LookupEnv("DATABASE_DSN"); !ok {
-		cfg.DatabaseDSN = flagServerDatabaseDSN
+	envCfg, err := ParseEnvServerConfig(flagCfg)
+	if err != nil {
+		return nil, err
 	}
 
-	if _, ok := os.LookupEnv("KEY"); !ok {
-		cfg.Key = flagServerKey
-	}
-	if _, ok := os.LookupEnv("CRYPTO_KEY"); !ok {
-		cfg.CertFile = flagServerCertFile
-	}
-
-	if _, ok := os.LookupEnv("CONFIG"); !ok {
-		cfg.ConfigFilePath = flagServerConfigFile
-	}
-
-	cfg.Delays = defaultServerConfig.Delays
-}
-
-func getServerConfigWithFlags(programName string, args []string) (*ServerConfig, error) {
-	parseServerFlags(programName, args)
-	cfg := &ServerConfig{}
-
-	if err := env.Parse(cfg); err != nil {
-		return nil, fmt.Errorf("parse config from env: %w", err)
-	}
-	fCfg, err := ParseServerConfig(cfg.ConfigFilePath)
+	fileCfg, err := ParseFileServerConfig(envCfg.ConfigFilePath, &defaultServerConfig)
 	if err != nil && !errors.Is(err, ErrEmptyPath) {
 		return nil, err
 	}
-	setServerFlagValues(cfg)
-	cfg.UpdateDefaultFields(fCfg)
+
+	flagCfg, err = ParseFlagsServerConfig(programName, args, fileCfg)
+	if err != nil {
+		return nil, err
+	}
+
+	envCfg, err = ParseEnvServerConfig(flagCfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return envCfg, nil
+}
+
+func ParseFileServerConfig(path string, defaultCfg *ServerConfig) (*ServerConfig, error) {
+	if path == "" {
+		return defaultCfg, ErrEmptyPath
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("parse config from file: %w", err)
+	}
+
+	cfg := defaultCfg
+	err = json.Unmarshal(data, cfg) // TODO fix time.Duration unmarshalling
+	if err != nil {
+		return nil, fmt.Errorf("parse config from file: %w", err)
+	}
 
 	return cfg, nil
 }
 
-func ParseServerConfig(path string) (*ServerConfig, error) {
-	if path == "" {
-		return nil, ErrEmptyPath
-	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
+func ParseEnvServerConfig(defaultCfg *ServerConfig) (*ServerConfig, error) {
+	cfg := defaultCfg
 
-	cfg := defaultServerConfig
-	err = json.Unmarshal(data, cfg) // TODO fix time.Duration unmarshalling
-	if err != nil {
-		return nil, err
+	if err := env.Parse(cfg); err != nil {
+		return nil, fmt.Errorf("parse config from env: %w", err)
 	}
 
 	return cfg, nil

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type wantServerFlags struct {
@@ -16,7 +17,7 @@ type wantServerFlags struct {
 	NeededRestore bool
 }
 
-func Test_parseServerFlags(t *testing.T) {
+func Test_ParseFlagsServerConfig(t *testing.T) {
 	tests := []struct {
 		name      string
 		args      []string
@@ -147,16 +148,17 @@ func Test_parseServerFlags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parseServerFlags("program", tt.args)
+			config, err := ParseFlagsServerConfig("program", tt.args, nil)
+			require.NoError(t, err)
 
-			if !assert.ObjectsAreEqual(tt.wantFlags.ServerAddr, flagServerRunAddr) {
-				t.Errorf("expected flagServerAddr: %v, got: %v", tt.wantFlags.ServerAddr, flagServerRunAddr)
+			if !assert.ObjectsAreEqual(tt.wantFlags.ServerAddr, config.ServerAddr) {
+				t.Errorf("expected flagServerAddr: %v, got: %v", tt.wantFlags.ServerAddr, config.ServerAddr)
 			}
-			assert.Equalf(t, tt.wantFlags.StoragePath, flagServerStoragePath, `expected flagStoragePath: %v, got: %v`, tt.wantFlags.StoragePath, flagServerStoragePath)
-			assert.Equalf(t, tt.wantFlags.StoreInterval, flagServerStoreInterval, `expected flagStoreInterval: %v, got: %v`, tt.wantFlags.StoreInterval, flagServerStoreInterval)
-			assert.Equalf(t, tt.wantFlags.NeededRestore, flagServerNeedRestore, `expected flagNeedRestore: %v, got: %v`, tt.wantFlags.NeededRestore, flagServerNeedRestore)
-			assert.Equalf(t, tt.wantFlags.DatabaseDSN, flagServerDatabaseDSN, `expected flagDatabaseDSN: "%v", got: "%v"`, tt.wantFlags.DatabaseDSN, flagServerDatabaseDSN)
-			assert.Equalf(t, tt.wantFlags.Key, flagServerKey, `expected flagKey: "%v", got: "%v"`, tt.wantFlags.Key, flagServerKey)
+			assert.Equalf(t, tt.wantFlags.StoragePath, config.StoragePath, `expected flagStoragePath: %v, got: %v`, tt.wantFlags.StoragePath, config.StoragePath)
+			assert.Equalf(t, tt.wantFlags.StoreInterval, config.StoreInterval, `expected flagStoreInterval: %v, got: %v`, tt.wantFlags.StoreInterval, config.StoreInterval)
+			assert.Equalf(t, tt.wantFlags.NeededRestore, config.NeededRestore, `expected flagNeedRestore: %v, got: %v`, tt.wantFlags.NeededRestore, config.NeededRestore)
+			assert.Equalf(t, tt.wantFlags.DatabaseDSN, config.DatabaseDSN, `expected flagDatabaseDSN: "%v", got: "%v"`, tt.wantFlags.DatabaseDSN, config.DatabaseDSN)
+			assert.Equalf(t, tt.wantFlags.Key, config.Key, `expected flagKey: "%v", got: "%v"`, tt.wantFlags.Key, config.Key)
 		})
 	}
 }

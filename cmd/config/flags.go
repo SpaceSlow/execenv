@@ -2,36 +2,36 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"time"
 )
 
-var (
-	flagServerRunAddr       NetAddress
-	flagServerStoreInterval time.Duration
-	flagServerStoragePath   string
-	flagServerNeedRestore   bool
-	flagServerDatabaseDSN   string
-	flagServerKey           string
-	flagServerCertFile      string
-	flagServerConfigFile    string
-)
-
-func parseServerFlags(programName string, args []string) {
+func ParseFlagsServerConfig(programName string, args []string, defaultCfg *ServerConfig) (*ServerConfig, error) {
 	flagSet := flag.NewFlagSet(programName, flag.ContinueOnError)
 
-	flagServerRunAddr = defaultServerConfig.ServerAddr
-	flagSet.Var(&flagServerRunAddr, "a", "address and port to run server")
-	flagSet.DurationVar(&flagServerStoreInterval, "i", defaultServerConfig.StoreInterval, "store interval in secs (default 300 sec)")
-	flagSet.StringVar(&flagServerStoragePath, "f", defaultServerConfig.StoragePath, "file storage path (default /tmp/metrics-db.json")
-	flagSet.BoolVar(&flagServerNeedRestore, "r", defaultServerConfig.NeededRestore, "needed loading saved metrics from file (default true)")
-	flagSet.StringVar(&flagServerDatabaseDSN, "d", defaultServerConfig.DatabaseDSN, "PostgreSQL (ver. >=10) database DSN (example: postgres://username:password@localhost:5432/database_name")
-	flagSet.StringVar(&flagServerKey, "k", defaultServerConfig.Key, "key for signing queries")
-	flagSet.StringVar(&flagServerCertFile, "crypto-key", defaultServerConfig.CertFile, "path to cert file")
+	var cfg ServerConfig
+	if defaultCfg != nil {
+		cfg = *defaultCfg
+	} else {
+		cfg = defaultServerConfig
+	}
 
-	flagSet.StringVar(&flagServerConfigFile, "c", "", "config file path")
-	flagSet.StringVar(&flagServerConfigFile, "config", "", "config file path")
+	flagSet.Var(&cfg.ServerAddr, "a", "address and port to run server")
+	flagSet.DurationVar(&cfg.StoreInterval, "i", cfg.StoreInterval, "store interval in secs (default 300 sec)")
+	flagSet.StringVar(&cfg.StoragePath, "f", cfg.StoragePath, "file storage path (default /tmp/metrics-db.json")
+	flagSet.BoolVar(&cfg.NeededRestore, "r", cfg.NeededRestore, "needed loading saved metrics from file (default true)")
+	flagSet.StringVar(&cfg.DatabaseDSN, "d", cfg.DatabaseDSN, "PostgreSQL (ver. >=10) database DSN (example: postgres://username:password@localhost:5432/database_name")
+	flagSet.StringVar(&cfg.Key, "k", cfg.Key, "key for signing queries")
+	flagSet.StringVar(&cfg.CertFile, "crypto-key", cfg.CertFile, "path to cert file")
 
-	flagSet.Parse(args)
+	flagSet.StringVar(&cfg.ConfigFilePath, "c", cfg.ConfigFilePath, "config file path")
+	flagSet.StringVar(&cfg.ConfigFilePath, "config", cfg.ConfigFilePath, "config file path")
+
+	err := flagSet.Parse(args)
+	if err != nil {
+		return nil, fmt.Errorf("parse config from flags: %w", err)
+	}
+	return &cfg, nil
 }
 
 var (

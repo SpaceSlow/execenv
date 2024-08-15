@@ -7,11 +7,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_getServerConfigWithFlags(t *testing.T) {
+func Test_getServerConfig(t *testing.T) {
 	tests := []struct {
 		name    string
 		envs    map[string]string
-		want    *ServerConfig
+		want    ServerConfig
 		flags   []string
 		wantErr bool
 	}{
@@ -38,7 +38,7 @@ func Test_getServerConfigWithFlags(t *testing.T) {
 				"CRYPTO_KEY":        "/tmp/cert.env.pem",
 			},
 			flags: []string{"-a=:8080", "-f=/tmp/flag", "-i=0s", "-r", "-d=postgres://flag:flag@localhost:5432/flag", "-k=flag", "-crypto-key=/tmp/cert.flag.pem"},
-			want: &ServerConfig{
+			want: ServerConfig{
 				StoragePath:   "/tmp/env",
 				DatabaseDSN:   "postgres://env:env@localhost:5432/env",
 				Key:           "env",
@@ -52,7 +52,7 @@ func Test_getServerConfigWithFlags(t *testing.T) {
 		{
 			name:  "only flags",
 			flags: []string{"-a=:8080", "-f=/tmp/flag", "-i=0s", "-r", "-d=postgres://flag:flag@localhost:5432/flag", "-k=flag", "-crypto-key=/tmp/cert.flag.pem"},
-			want: &ServerConfig{
+			want: ServerConfig{
 				StoragePath:   "/tmp/flag",
 				DatabaseDSN:   "postgres://flag:flag@localhost:5432/flag",
 				Key:           "flag",
@@ -70,9 +70,11 @@ func Test_getServerConfigWithFlags(t *testing.T) {
 				t.Setenv(k, v)
 			}
 
-			got, err := getServerConfigWithFlags("program", tt.flags)
+			got, err := getServerConfig("program", tt.flags)
 			assert.Equal(t, tt.wantErr, err != nil)
-			assert.Equal(t, tt.want, got)
+			if err == nil {
+				assert.ObjectsAreEqual(tt.want, *got)
+			}
 		})
 	}
 }
