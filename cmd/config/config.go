@@ -65,12 +65,12 @@ type ServerConfig struct {
 	DatabaseDSN    string `env:"DATABASE_DSN" json:"database_dsn"`
 	Key            string `env:"KEY"`
 	CertFile       string `env:"CRYPTO_KEY" json:"crypto_key"`
+	ConfigFilePath string `env:"CONFIG"`
 	Delays         []time.Duration
 	privateKey     *rsa.PrivateKey
 	ServerAddr     NetAddress `env:"ADDRESS" json:"address"`
 	StoreInterval  Duration   `env:"STORE_INTERVAL" json:"store_interval"`
 	NeededRestore  bool       `env:"RESTORE" json:"restore"`
-	ConfigFilePath string     `env:"CONFIG"`
 }
 
 func (c *ServerConfig) parseFlags(programName string, args []string) error {

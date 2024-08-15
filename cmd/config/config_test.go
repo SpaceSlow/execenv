@@ -152,8 +152,8 @@ func Test_getServerConfig(t *testing.T) {
 	tests := []struct {
 		name    string
 		envs    map[string]string
-		want    ServerConfig
 		flags   []string
+		want    ServerConfig
 		wantErr bool
 	}{
 		{
