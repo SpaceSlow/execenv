@@ -5,7 +5,148 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestServerConfig_parseFlags(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		wantCfg ServerConfig
+	}{
+		{
+			name:    "standard flag values",
+			args:    nil,
+			wantCfg: defaultServerConfig,
+		},
+		{
+			name: "non-standard port flag",
+			args: []string{
+				"-a=:8081",
+			},
+			wantCfg: ServerConfig{
+				ServerAddr: NetAddress{
+					Host: "",
+					Port: 8081,
+				},
+				StoreInterval: defaultServerConfig.StoreInterval,
+				StoragePath:   defaultServerConfig.StoragePath,
+				NeededRestore: defaultServerConfig.NeededRestore,
+				DatabaseDSN:   defaultServerConfig.DatabaseDSN,
+				Key:           defaultServerConfig.Key,
+			},
+		},
+		{
+			name: "sync adding into file flag",
+			args: []string{
+				"-i=0s",
+			},
+			wantCfg: ServerConfig{
+				ServerAddr:    defaultServerConfig.ServerAddr,
+				StoreInterval: Duration{0},
+				StoragePath:   defaultServerConfig.StoragePath,
+				NeededRestore: defaultServerConfig.NeededRestore,
+				DatabaseDSN:   defaultServerConfig.DatabaseDSN,
+				Key:           defaultServerConfig.Key,
+			},
+		},
+		{
+			name: "custom file storage flag",
+			args: []string{
+				"-f=/tmp/file",
+			},
+			wantCfg: ServerConfig{
+				ServerAddr:    defaultServerConfig.ServerAddr,
+				StoreInterval: defaultServerConfig.StoreInterval,
+				StoragePath:   "/tmp/file",
+				NeededRestore: defaultServerConfig.NeededRestore,
+				DatabaseDSN:   defaultServerConfig.DatabaseDSN,
+				Key:           defaultServerConfig.Key,
+			},
+		},
+		{
+			name: "restore flag",
+			args: []string{
+				"-r",
+			},
+			wantCfg: ServerConfig{
+				ServerAddr:    defaultServerConfig.ServerAddr,
+				StoreInterval: defaultServerConfig.StoreInterval,
+				StoragePath:   defaultServerConfig.StoragePath,
+				NeededRestore: true,
+				DatabaseDSN:   defaultServerConfig.DatabaseDSN,
+				Key:           defaultServerConfig.Key,
+			},
+		},
+		{
+			name: "database dsn flag",
+			args: []string{
+				"-d=postgres://username:password@localhost:5432/database_name",
+			},
+			wantCfg: ServerConfig{
+				ServerAddr:    defaultServerConfig.ServerAddr,
+				StoreInterval: defaultServerConfig.StoreInterval,
+				StoragePath:   defaultServerConfig.StoragePath,
+				NeededRestore: defaultServerConfig.NeededRestore,
+				DatabaseDSN:   "postgres://username:password@localhost:5432/database_name",
+				Key:           defaultServerConfig.Key,
+			},
+		},
+		{
+			name: "setting non-empty key flag",
+			args: []string{
+				"-k=non-standard-key",
+			},
+			wantCfg: ServerConfig{
+				ServerAddr:    defaultServerConfig.ServerAddr,
+				StoreInterval: defaultServerConfig.StoreInterval,
+				StoragePath:   defaultServerConfig.StoragePath,
+				NeededRestore: defaultServerConfig.NeededRestore,
+				DatabaseDSN:   defaultServerConfig.DatabaseDSN,
+				Key:           "non-standard-key",
+			},
+		},
+		{
+			name: "all flags",
+			args: []string{
+				"-a=example.com:80",
+				"-i=10s",
+				"-r",
+				"-f=/tmp/some-file.json",
+				"-k=non-standard-key",
+				"-d=postgres://username:password@localhost:5432/database_name",
+			},
+			wantCfg: ServerConfig{
+				ServerAddr: NetAddress{
+					Host: "example.com",
+					Port: 80,
+				},
+				StoreInterval: Duration{10 * time.Second},
+				StoragePath:   "/tmp/some-file.json",
+				NeededRestore: true,
+				DatabaseDSN:   "postgres://username:password@localhost:5432/database_name",
+				Key:           "non-standard-key",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := defaultServerConfig
+			err := config.parseFlags("program", tt.args)
+			require.NoError(t, err)
+
+			if !assert.ObjectsAreEqual(tt.wantCfg.ServerAddr, config.ServerAddr) {
+				t.Errorf("expected flagServerAddr: %v, got: %v", tt.wantCfg.ServerAddr, config.ServerAddr)
+			}
+			assert.Equalf(t, tt.wantCfg.StoragePath, config.StoragePath, `expected StoragePath: %v, got: %v`, tt.wantCfg.StoragePath, config.StoragePath)
+			assert.Equalf(t, tt.wantCfg.StoreInterval, config.StoreInterval, `expected StoreInterval: %v, got: %v`, tt.wantCfg.StoreInterval, config.StoreInterval)
+			assert.Equalf(t, tt.wantCfg.NeededRestore, config.NeededRestore, `expected NeedRestore: %v, got: %v`, tt.wantCfg.NeededRestore, config.NeededRestore)
+			assert.Equalf(t, tt.wantCfg.DatabaseDSN, config.DatabaseDSN, `expected DatabaseDSN: "%v", got: "%v"`, tt.wantCfg.DatabaseDSN, config.DatabaseDSN)
+			assert.Equalf(t, tt.wantCfg.Key, config.Key, `expected Key: "%v", got: "%v"`, tt.wantCfg.Key, config.Key)
+		})
+	}
+}
 
 func Test_getServerConfig(t *testing.T) {
 	tests := []struct {

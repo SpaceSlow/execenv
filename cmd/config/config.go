@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"sync"
@@ -72,6 +73,52 @@ type ServerConfig struct {
 	ConfigFilePath string     `env:"CONFIG"`
 }
 
+func (c *ServerConfig) parseFlags(programName string, args []string) error {
+	flagSet := flag.NewFlagSet(programName, flag.ContinueOnError)
+
+	flagSet.Var(&c.ServerAddr, "a", "address and port to run server")
+	flagSet.DurationVar(&c.StoreInterval.Duration, "i", c.StoreInterval.Duration, "store interval in secs (default 300 sec)")
+	flagSet.StringVar(&c.StoragePath, "f", c.StoragePath, "file storage path (default /tmp/metrics-db.json")
+	flagSet.BoolVar(&c.NeededRestore, "r", c.NeededRestore, "needed loading saved metrics from file (default true)")
+	flagSet.StringVar(&c.DatabaseDSN, "d", c.DatabaseDSN, "PostgreSQL (ver. >=10) database DSN (example: postgres://username:password@localhost:5432/database_name")
+	flagSet.StringVar(&c.Key, "k", c.Key, "key for signing queries")
+	flagSet.StringVar(&c.CertFile, "crypto-key", c.CertFile, "path to cert file")
+
+	flagSet.StringVar(&c.ConfigFilePath, "c", c.ConfigFilePath, "config file path")
+	flagSet.StringVar(&c.ConfigFilePath, "config", c.ConfigFilePath, "config file path")
+
+	err := flagSet.Parse(args)
+	if err != nil {
+		return fmt.Errorf("parse config from flags: %w", err)
+	}
+	return nil
+}
+
+func (c *ServerConfig) parseEnv() error {
+	if err := env.Parse(c); err != nil {
+		return fmt.Errorf("parse config from env: %w", err)
+	}
+
+	return nil
+}
+
+func (c *ServerConfig) parseFile(path string) error {
+	if path == "" {
+		return ErrEmptyPath
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("parse config from file: %w", err)
+	}
+
+	err = json.Unmarshal(data, c)
+	if err != nil {
+		return fmt.Errorf("parse config from file: %w", err)
+	}
+
+	return nil
+}
+
 func (c *ServerConfig) setPrivateKey() error {
 	if c.CertFile == "" {
 		return nil
@@ -108,60 +155,30 @@ func GetServerConfig() (*ServerConfig, error) {
 }
 
 func getServerConfig(programName string, args []string) (*ServerConfig, error) {
-	flagCfg, err := ParseFlagsServerConfig(programName, args, nil)
-	if err != nil {
+	tmpCfg := defaultServerConfig
+
+	if err := tmpCfg.parseFlags(programName, args); err != nil {
 		return nil, err
 	}
 
-	envCfg, err := ParseEnvServerConfig(flagCfg)
-	if err != nil {
+	if err := tmpCfg.parseEnv(); err != nil {
 		return nil, err
 	}
 
-	fileCfg, err := ParseFileServerConfig(envCfg.ConfigFilePath, &defaultServerConfig)
-	if err != nil && !errors.Is(err, ErrEmptyPath) {
+	cfg := defaultServerConfig
+	if err := cfg.parseFile(tmpCfg.ConfigFilePath); err != nil && !errors.Is(err, ErrEmptyPath) {
 		return nil, err
 	}
 
-	flagCfg, err = ParseFlagsServerConfig(programName, args, fileCfg)
-	if err != nil {
+	if err := cfg.parseFlags(programName, args); err != nil {
 		return nil, err
 	}
 
-	envCfg, err = ParseEnvServerConfig(flagCfg)
-	if err != nil {
+	if err := cfg.parseEnv(); err != nil {
 		return nil, err
 	}
 
-	return envCfg, nil
-}
-
-func ParseFileServerConfig(path string, defaultCfg *ServerConfig) (*ServerConfig, error) {
-	if path == "" {
-		return defaultCfg, ErrEmptyPath
-	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("parse config from file: %w", err)
-	}
-
-	cfg := defaultCfg
-	err = json.Unmarshal(data, cfg)
-	if err != nil {
-		return nil, fmt.Errorf("parse config from file: %w", err)
-	}
-
-	return cfg, nil
-}
-
-func ParseEnvServerConfig(defaultCfg *ServerConfig) (*ServerConfig, error) {
-	cfg := defaultCfg
-
-	if err := env.Parse(cfg); err != nil {
-		return nil, fmt.Errorf("parse config from env: %w", err)
-	}
-
-	return cfg, nil
+	return &cfg, nil
 }
 
 var defaultAgentConfig = &AgentConfig{
