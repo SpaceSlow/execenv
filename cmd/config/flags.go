@@ -17,7 +17,7 @@ func ParseFlagsServerConfig(programName string, args []string, defaultCfg *Serve
 	}
 
 	flagSet.Var(&cfg.ServerAddr, "a", "address and port to run server")
-	flagSet.DurationVar(&cfg.StoreInterval, "i", cfg.StoreInterval, "store interval in secs (default 300 sec)")
+	flagSet.DurationVar(&cfg.StoreInterval.Duration, "i", cfg.StoreInterval.Duration, "store interval in secs (default 300 sec)")
 	flagSet.StringVar(&cfg.StoragePath, "f", cfg.StoragePath, "file storage path (default /tmp/metrics-db.json")
 	flagSet.BoolVar(&cfg.NeededRestore, "r", cfg.NeededRestore, "needed loading saved metrics from file (default true)")
 	flagSet.StringVar(&cfg.DatabaseDSN, "d", cfg.DatabaseDSN, "PostgreSQL (ver. >=10) database DSN (example: postgres://username:password@localhost:5432/database_name")

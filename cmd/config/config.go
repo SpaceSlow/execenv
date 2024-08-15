@@ -49,7 +49,7 @@ var defaultServerConfig = ServerConfig{
 		Host: "localhost",
 		Port: 8080,
 	},
-	StoreInterval: 300 * time.Second,
+	StoreInterval: Duration{300 * time.Second},
 	StoragePath:   "/tmp/metrics-db.json",
 	NeededRestore: true,
 	DatabaseDSN:   "",
@@ -66,10 +66,10 @@ type ServerConfig struct {
 	CertFile       string `env:"CRYPTO_KEY" json:"crypto_key"`
 	Delays         []time.Duration
 	privateKey     *rsa.PrivateKey
-	ServerAddr     NetAddress    `env:"ADDRESS" json:"address"`
-	StoreInterval  time.Duration `env:"STORE_INTERVAL" json:"store_interval"`
-	NeededRestore  bool          `env:"RESTORE" json:"restore"`
-	ConfigFilePath string        `env:"CONFIG"`
+	ServerAddr     NetAddress `env:"ADDRESS" json:"address"`
+	StoreInterval  Duration   `env:"STORE_INTERVAL" json:"store_interval"`
+	NeededRestore  bool       `env:"RESTORE" json:"restore"`
+	ConfigFilePath string     `env:"CONFIG"`
 }
 
 func (c *ServerConfig) setPrivateKey() error {
@@ -146,7 +146,7 @@ func ParseFileServerConfig(path string, defaultCfg *ServerConfig) (*ServerConfig
 	}
 
 	cfg := defaultCfg
-	err = json.Unmarshal(data, cfg) // TODO fix time.Duration unmarshalling
+	err = json.Unmarshal(data, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("parse config from file: %w", err)
 	}

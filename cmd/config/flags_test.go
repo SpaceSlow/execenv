@@ -13,7 +13,7 @@ type wantServerFlags struct {
 	DatabaseDSN   string
 	Key           string
 	ServerAddr    NetAddress
-	StoreInterval time.Duration
+	StoreInterval Duration
 	NeededRestore bool
 }
 
@@ -59,7 +59,7 @@ func Test_ParseFlagsServerConfig(t *testing.T) {
 			},
 			wantFlags: wantServerFlags{
 				ServerAddr:    defaultServerConfig.ServerAddr,
-				StoreInterval: 0,
+				StoreInterval: Duration{0},
 				StoragePath:   defaultServerConfig.StoragePath,
 				NeededRestore: defaultServerConfig.NeededRestore,
 				DatabaseDSN:   defaultServerConfig.DatabaseDSN,
@@ -137,7 +137,7 @@ func Test_ParseFlagsServerConfig(t *testing.T) {
 					Host: "example.com",
 					Port: 80,
 				},
-				StoreInterval: 10 * time.Second,
+				StoreInterval: Duration{10 * time.Second},
 				StoragePath:   "/tmp/some-file.json",
 				NeededRestore: true,
 				DatabaseDSN:   "postgres://username:password@localhost:5432/database_name",
