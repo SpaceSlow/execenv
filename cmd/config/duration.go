@@ -10,7 +10,6 @@ import (
 var (
 	_ flag.Value               = (*Duration)(nil)
 	_ encoding.TextUnmarshaler = (*Duration)(nil)
-	_ json.Marshaler           = (*Duration)(nil)
 	_ json.Unmarshaler         = (*Duration)(nil)
 )
 
@@ -26,10 +25,6 @@ func (d *Duration) Set(s string) error {
 
 func (d *Duration) UnmarshalText(text []byte) error {
 	return d.Set(string(text))
-}
-
-func (d *Duration) MarshalJSON() ([]byte, error) {
-	return json.Marshal(d.String())
 }
 
 func (d *Duration) UnmarshalJSON(b []byte) error {
