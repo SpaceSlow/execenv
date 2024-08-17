@@ -1,6 +1,8 @@
 package config
 
 import (
+	"os"
+	"slices"
 	"testing"
 	"time"
 
@@ -220,6 +222,20 @@ func Test_getServerConfig(t *testing.T) {
 	}
 }
 
+func TestGetServerConfig(t *testing.T) {
+	temp := slices.Clone(os.Args)
+	os.Args = []string{"test"}
+
+	firstCfg, err := GetServerConfig()
+	require.NoError(t, err)
+	secondCfg, err := GetServerConfig()
+	require.NoError(t, err)
+
+	assert.Same(t, secondCfg, firstCfg)
+
+	os.Args = temp
+}
+
 func Test_getAgentConfigWithFlags(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -420,4 +436,18 @@ func TestAgentConfig_parseFlags(t *testing.T) {
 			assert.Equalf(t, tt.wantCfg.Key, config.Key, `expected Key: "%v", got: "%v"`, tt.wantCfg.Key, config.Key)
 		})
 	}
+}
+
+func TestGetAgentConfig(t *testing.T) {
+	temp := slices.Clone(os.Args)
+	os.Args = []string{"test"}
+
+	firstCfg, err := GetAgentConfig()
+	require.NoError(t, err)
+	secondCfg, err := GetAgentConfig()
+	require.NoError(t, err)
+
+	assert.Same(t, secondCfg, firstCfg)
+
+	os.Args = temp
 }

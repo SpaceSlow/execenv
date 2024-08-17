@@ -140,17 +140,18 @@ func (c *ServerConfig) PrivateKey() *rsa.PrivateKey {
 }
 
 var serverConfig *ServerConfig = nil
+var once sync.Once
 
 // GetServerConfig возвращает конфигурацию сервера на основании указанных флагов при запуске или указанных переменных окружения.
 func GetServerConfig() (*ServerConfig, error) {
 	var err error
-	sync.OnceFunc(func() {
+	once.Do(func() {
 		serverConfig, err = getServerConfig(os.Args[0], os.Args[1:])
 		if err != nil {
 			return
 		}
 		err = serverConfig.setPrivateKey()
-	})()
+	})
 	return serverConfig, err
 }
 
@@ -253,9 +254,9 @@ var agentConfig *AgentConfig = nil
 // GetAgentConfig возвращает конфигурацию агента на основании указанных флагов при запуске или указанных переменных окружения.
 func GetAgentConfig() (*AgentConfig, error) {
 	var err error
-	sync.OnceFunc(func() {
+	once.Do(func() {
 		agentConfig, err = getAgentConfig(os.Args[0], os.Args[1:])
-	})()
+	})
 	return agentConfig, err
 }
 
