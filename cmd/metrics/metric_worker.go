@@ -54,15 +54,6 @@ func NewMetricWorkers(numWorkers int, url, key, certFile string, delays []time.D
 	}, nil
 }
 
-func getPublicKey(file string) (*rsa.PublicKey, error) {
-	certBytes, err := os.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-	certBlock, _ := pem.Decode(certBytes)
-	return x509.ParsePKCS1PublicKey(certBlock.Bytes)
-}
-
 func (mw *MetricWorkers) Send(metrics []Metric) {
 	pollCount := mw.pollCount.Load()
 	data, err := json.Marshal(metrics)
@@ -160,6 +151,14 @@ func (mw *MetricWorkers) Poll(pollCh chan []Metric) {
 		<-pollCh
 	}
 	pollCh <- metricSlice
+}
+
+func (mw *MetricWorkers) Close() {
+	close(mw.errorsCh)
+}
+
+func (mw *MetricWorkers) Err() chan error {
+	return mw.errorsCh
 }
 
 func (mw *MetricWorkers) getGopsutilMetrics() chan []Metric {
@@ -349,10 +348,14 @@ func (mw *MetricWorkers) getRuntimeMetrics() chan []Metric {
 	return metricsCh
 }
 
-func (mw *MetricWorkers) Close() {
-	close(mw.errorsCh)
-}
-
-func (mw *MetricWorkers) Err() chan error {
-	return mw.errorsCh
+func getPublicKey(file string) (*rsa.PublicKey, error) {
+	certBytes, err := os.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+	certBlock, _ := pem.Decode(certBytes)
+	if certBlock == nil {
+		return nil, ErrDecodePEMBlock
+	}
+	return x509.ParsePKCS1PublicKey(certBlock.Bytes)
 }
