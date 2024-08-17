@@ -10,6 +10,8 @@ import (
 var (
 	_ flag.Value               = (*Duration)(nil)
 	_ encoding.TextUnmarshaler = (*Duration)(nil)
+	_ json.Marshaler           = (*Duration)(nil)
+	_ json.Unmarshaler         = (*Duration)(nil)
 )
 
 type Duration struct {
