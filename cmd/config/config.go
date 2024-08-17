@@ -50,13 +50,13 @@ var defaultServerConfig = ServerConfig{
 		Host: "localhost",
 		Port: 8080,
 	},
-	StoreInterval: Duration{300 * time.Second},
-	StoragePath:   "/tmp/metrics-db.json",
-	NeededRestore: true,
-	DatabaseDSN:   "",
-	Key:           "",
-	CertFile:      "",
-	Delays:        []time.Duration{time.Second, 3 * time.Second, 5 * time.Second},
+	StoreInterval:  Duration{300 * time.Second},
+	StoragePath:    "/tmp/metrics-db.json",
+	NeededRestore:  true,
+	DatabaseDSN:    "",
+	Key:            "",
+	PrivateKeyFile: "",
+	Delays:         []time.Duration{time.Second, 3 * time.Second, 5 * time.Second},
 }
 
 // ServerConfig структура для конфигурации сервера сбора метрик.
@@ -64,7 +64,7 @@ type ServerConfig struct {
 	StoragePath    string `env:"FILE_STORAGE_PATH" json:"store_file"`
 	DatabaseDSN    string `env:"DATABASE_DSN" json:"database_dsn"`
 	Key            string `env:"KEY"`
-	CertFile       string `env:"CRYPTO_KEY" json:"crypto_key"`
+	PrivateKeyFile string `env:"CRYPTO_KEY" json:"crypto_key"`
 	ConfigFilePath string `env:"CONFIG"`
 	Delays         []time.Duration
 	privateKey     *rsa.PrivateKey
@@ -82,7 +82,7 @@ func (c *ServerConfig) parseFlags(programName string, args []string) error {
 	flagSet.BoolVar(&c.NeededRestore, "r", c.NeededRestore, "needed loading saved metrics from file (default true)")
 	flagSet.StringVar(&c.DatabaseDSN, "d", c.DatabaseDSN, "PostgreSQL (ver. >=10) database DSN (example: postgres://username:password@localhost:5432/database_name")
 	flagSet.StringVar(&c.Key, "k", c.Key, "key for signing queries")
-	flagSet.StringVar(&c.CertFile, "crypto-key", c.CertFile, "path to cert file")
+	flagSet.StringVar(&c.PrivateKeyFile, "crypto-key", c.PrivateKeyFile, "path to cert file")
 
 	flagSet.StringVar(&c.ConfigFilePath, "c", c.ConfigFilePath, "config file path")
 	flagSet.StringVar(&c.ConfigFilePath, "config", c.ConfigFilePath, "config file path")
@@ -120,10 +120,10 @@ func (c *ServerConfig) parseFile(path string) error {
 }
 
 func (c *ServerConfig) setPrivateKey() error {
-	if c.CertFile == "" {
+	if c.PrivateKeyFile == "" {
 		return nil
 	}
-	keyBytes, err := os.ReadFile(c.CertFile)
+	keyBytes, err := os.ReadFile(c.PrivateKeyFile)
 	if err != nil {
 		return err
 	}
