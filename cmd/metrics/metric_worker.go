@@ -65,8 +65,8 @@ func (mw *MetricWorkers) Send(metrics []Metric) {
 	var hash string
 	if mw.key != "" {
 		h := sha256.New()
-		h.Write(data)
-		hash = hex.EncodeToString(h.Sum([]byte(mw.key)))
+		h.Write(append(data, []byte(mw.key)...))
+		hash = hex.EncodeToString(h.Sum(nil))
 	}
 
 	data, err = compress(data)
