@@ -10,8 +10,8 @@ import (
 func TestDuration_UnmarshalJSON(t *testing.T) {
 	tests := []struct {
 		name             string
-		durationJson     []byte
 		expectedDuration *Duration
+		durationJson     []byte
 		wantErr          bool
 	}{
 		{

@@ -65,6 +65,7 @@ func Test_getPublicKey(t *testing.T) {
 	defer os.Remove(f.Name())
 	certificate, err := getPublicKey(f.Name()) // getting empty certificate
 	require.ErrorIs(t, err, ErrDecodePEMBlock)
+	assert.Nil(t, certificate)
 
 	err = writeRandomCertificateToFile(f.Name())
 	require.NoError(t, err)
