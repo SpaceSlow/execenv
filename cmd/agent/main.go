@@ -44,6 +44,12 @@ func main() {
 	for {
 		select {
 		case <-closed:
+			sendCh <- <-pollCh
+			if err = <-metricWorkers.Err(); err != nil {
+				log.Println(err)
+			} else {
+				log.Println("sended metrics")
+			}
 			close(sendCh)
 			close(pollCh)
 			metricWorkers.Close()
@@ -54,7 +60,7 @@ func main() {
 		case <-reportTick:
 			metricSlice := <-pollCh
 			sendCh <- metricSlice
-		case err := <-metricWorkers.Err():
+		case err = <-metricWorkers.Err():
 			if err != nil {
 				log.Println(err)
 				continue
