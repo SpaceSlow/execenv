@@ -1,11 +1,10 @@
 package storages
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/SpaceSlow/execenv/cmd/logger"
@@ -19,12 +18,14 @@ var ErrNoSpecifyFile = errors.New("no file specified")
 // MemFileStorage хранит метрики и в памяти и в файле, поддерживает синхронизацию памяти с файлом.
 type MemFileStorage struct {
 	*MemStorage
+	ctx         context.Context
 	f           *os.File
 	isSyncStore bool
 }
 
-func NewMemFileStorage(filename string, storePerSeconds time.Duration, neededRestore bool) (*MemFileStorage, error) {
+func NewMemFileStorage(ctx context.Context, filename string, duration time.Duration, neededRestore bool) (*MemFileStorage, error) {
 	storage := &MemFileStorage{
+		ctx:        ctx,
 		MemStorage: NewMemStorage(),
 		f:          nil,
 	}
@@ -48,9 +49,9 @@ func NewMemFileStorage(filename string, storePerSeconds time.Duration, neededRes
 		return nil, err
 	}
 
-	storage.isSyncStore = storePerSeconds == 0
+	storage.isSyncStore = duration == 0
 	if !storage.isSyncStore {
-		go storage.startStoreMetricsPerSecondsTask(storePerSeconds)
+		go storage.startStoreMetricsPerSecondsTask(duration)
 	}
 
 	return storage, nil
@@ -79,6 +80,12 @@ func (s *MemFileStorage) Close() error {
 	if s.f == nil {
 		return nil
 	}
+
+	err := s.SaveMetricsToFile()
+	if err != nil {
+		logger.Log.Error("not saved metrics")
+	}
+
 	return s.f.Close()
 }
 
@@ -127,13 +134,11 @@ func (s *MemFileStorage) LoadMetricsFromFile() error {
 
 func (s *MemFileStorage) startStoreMetricsPerSecondsTask(duration time.Duration) {
 	logger.Log.Info("start store metrics task")
-	closed := make(chan os.Signal, 1)
-	defer close(closed)
-	signal.Notify(closed, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
 	for {
 		select {
-		case <-closed:
-			logger.Log.Fatal("finish store metrics task")
+		case <-s.ctx.Done():
+			logger.Log.Info("store metrics task has been finished")
+			return
 		case <-time.After(duration):
 			err := s.SaveMetricsToFile()
 			if err != nil {

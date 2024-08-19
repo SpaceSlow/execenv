@@ -50,27 +50,29 @@ var defaultServerConfig = ServerConfig{
 		Host: "localhost",
 		Port: 8080,
 	},
-	StoreInterval:  Duration{300 * time.Second},
-	StoragePath:    "/tmp/metrics-db.json",
-	NeededRestore:  true,
-	DatabaseDSN:    "",
-	Key:            "",
-	PrivateKeyFile: "",
-	Delays:         []time.Duration{time.Second, 3 * time.Second, 5 * time.Second},
+	StoreInterval:   Duration{300 * time.Second},
+	StoragePath:     "/tmp/metrics-db.json",
+	NeededRestore:   true,
+	DatabaseDSN:     "",
+	Key:             "",
+	PrivateKeyFile:  "",
+	Delays:          []time.Duration{time.Second, 3 * time.Second, 5 * time.Second},
+	TimeoutShutdown: 500 * time.Second,
 }
 
 // ServerConfig структура для конфигурации сервера сбора метрик.
 type ServerConfig struct {
-	StoragePath    string `env:"FILE_STORAGE_PATH" json:"store_file"`
-	DatabaseDSN    string `env:"DATABASE_DSN" json:"database_dsn"`
-	Key            string `env:"KEY"`
-	PrivateKeyFile string `env:"CRYPTO_KEY" json:"crypto_key"`
-	ConfigFilePath string `env:"CONFIG"`
-	Delays         []time.Duration
-	privateKey     *rsa.PrivateKey
-	ServerAddr     NetAddress `env:"ADDRESS" json:"address"`
-	StoreInterval  Duration   `env:"STORE_INTERVAL" json:"store_interval"`
-	NeededRestore  bool       `env:"RESTORE" json:"restore"`
+	StoragePath     string          `env:"FILE_STORAGE_PATH" json:"store_file"`
+	DatabaseDSN     string          `env:"DATABASE_DSN" json:"database_dsn"`
+	Key             string          `env:"KEY"`
+	PrivateKeyFile  string          `env:"CRYPTO_KEY" json:"crypto_key"`
+	ConfigFilePath  string          `env:"CONFIG"`
+	Delays          []time.Duration `json:"-"`
+	privateKey      *rsa.PrivateKey
+	ServerAddr      NetAddress    `env:"ADDRESS" json:"address"`
+	StoreInterval   Duration      `env:"STORE_INTERVAL" json:"store_interval"`
+	TimeoutShutdown time.Duration `json:"-"`
+	NeededRestore   bool          `env:"RESTORE" json:"restore"`
 }
 
 func (c *ServerConfig) parseFlags(programName string, args []string) error {

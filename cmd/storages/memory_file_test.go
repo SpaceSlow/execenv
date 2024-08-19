@@ -1,6 +1,7 @@
 package storages
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"os"
@@ -41,7 +42,7 @@ func TestMemFileStorage_Add(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := NewMemFileStorage(path.Join(os.TempDir(), randStringBytes(10)), 0, false)
+			s, err := NewMemFileStorage(context.Background(), path.Join(os.TempDir(), randStringBytes(10)), 0, false)
 			require.NoError(t, err)
 			defer func() {
 				require.NoError(t, s.Close())
@@ -148,7 +149,7 @@ func TestMemFileStorage_Batch(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := NewMemFileStorage(path.Join(os.TempDir(), randStringBytes(10)), 0, false)
+			s, err := NewMemFileStorage(context.Background(), path.Join(os.TempDir(), randStringBytes(10)), 0, false)
 			require.NoError(t, err)
 			defer func() {
 				require.NoError(t, s.Close())
@@ -173,7 +174,7 @@ func TestMemFileStorage_Batch(t *testing.T) {
 }
 
 func TestMemFileStorage_Close(t *testing.T) {
-	s, err := NewMemFileStorage(path.Join(os.TempDir(), randStringBytes(10)), 0, false)
+	s, err := NewMemFileStorage(context.Background(), path.Join(os.TempDir(), randStringBytes(10)), 0, false)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, os.Remove(s.f.Name()))
@@ -218,7 +219,7 @@ func TestMemFileStorage_LoadMetricsFromFile(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := NewMemFileStorage(path.Join(os.TempDir(), randStringBytes(10)), 0, false)
+			s, err := NewMemFileStorage(context.Background(), path.Join(os.TempDir(), randStringBytes(10)), 0, false)
 			require.NoError(t, err)
 			defer func() {
 				require.NoError(t, s.Close())
@@ -267,7 +268,7 @@ func TestMemFileStorage_SaveMetricsToFile(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := NewMemFileStorage(path.Join(os.TempDir(), randStringBytes(10)), 1000*time.Second, false)
+			s, err := NewMemFileStorage(context.Background(), path.Join(os.TempDir(), randStringBytes(10)), 1000*time.Second, false)
 			require.NoError(t, err)
 			defer func() {
 				require.NoError(t, s.Close())
