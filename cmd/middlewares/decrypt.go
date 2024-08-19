@@ -18,7 +18,7 @@ func WithDecryption(next http.Handler) http.Handler {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		if cfg.PrivateKey() == nil {
+		if cfg.PrivateKey() == nil || r.Body == nil {
 			next.ServeHTTP(w, r)
 			return
 		}
