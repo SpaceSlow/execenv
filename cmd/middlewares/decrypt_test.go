@@ -6,14 +6,16 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
-	"github.com/SpaceSlow/execenv/cmd/config"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/SpaceSlow/execenv/cmd/config"
 )
 
 func writeRandomPrivateKeyToFile(filename string) error {
