@@ -2,13 +2,15 @@ package middlewares
 
 import (
 	"bytes"
-	"github.com/SpaceSlow/execenv/cmd/config"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/SpaceSlow/execenv/cmd/config"
 )
 
 func TestWithSigning(t *testing.T) {
