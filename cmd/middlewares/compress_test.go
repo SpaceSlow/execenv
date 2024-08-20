@@ -2,13 +2,15 @@ package middlewares
 
 import (
 	"bytes"
-	"github.com/SpaceSlow/execenv/cmd/metrics"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/SpaceSlow/execenv/cmd/metrics"
 )
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890 ,.:"
