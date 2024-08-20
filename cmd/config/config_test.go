@@ -236,6 +236,59 @@ func TestGetServerConfig(t *testing.T) {
 	os.Args = temp
 }
 
+func TestServerConfig_parseFile(t *testing.T) {
+	tests := []struct {
+		name        string
+		data        []byte
+		expectedCfg ServerConfig
+		expectedErr bool
+	}{
+		{
+			name: "config with all filled field",
+			data: []byte(`
+				{
+					"address": "localhost:8080", 
+					"restore": true, 
+					"store_interval": "1s",
+					"store_file": "/path/to/file.db", 
+					"database_dsn": "postgres://file:file@localhost:5432/file",
+					"key": "key",
+					"crypto_key": "/path/to/private.key"
+				} 
+			`),
+			expectedCfg: ServerConfig{
+				StoragePath:    "/path/to/file.db",
+				Key:            "key",
+				DatabaseDSN:    "postgres://file:file@localhost:5432/file",
+				PrivateKeyFile: "/path/to/private.key",
+				Delays:         nil,
+				ServerAddr:     NetAddress{Host: "localhost", Port: 8080},
+				StoreInterval:  Duration{time.Second},
+				NeededRestore:  true,
+			},
+			expectedErr: false,
+		},
+		{
+			name:        "incorrect config",
+			data:        []byte(`incorrect config`),
+			expectedErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			filename, err := generateConfigFile(tt.data)
+			require.NoError(t, err)
+			defer os.Remove(filename)
+
+			cfg := ServerConfig{}
+			err = cfg.parseFile(filename)
+			assert.Equal(t, tt.expectedErr, err != nil)
+
+			assert.Equal(t, tt.expectedCfg, cfg)
+		})
+	}
+}
+
 func Test_getAgentConfigWithFlags(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -450,4 +503,67 @@ func TestGetAgentConfig(t *testing.T) {
 	assert.Same(t, secondCfg, firstCfg)
 
 	os.Args = temp
+}
+
+func TestAgentConfig_parseFile(t *testing.T) {
+	tests := []struct {
+		name        string
+		data        []byte
+		expectedCfg AgentConfig
+		expectedErr bool
+	}{
+		{
+			name: "config with all filled field",
+			data: []byte(`
+				{
+					"address": "localhost:8080",
+					"report_interval": "1s",
+					"poll_interval": "1s",
+					"crypto_key": "/path/to/cert.pem",
+					"rate_limit": 4,
+					"key": "key"
+				}  
+			`),
+			expectedCfg: AgentConfig{
+				Key:            "key",
+				CertFile:       "/path/to/cert.pem",
+				ReportInterval: Duration{time.Second},
+				PollInterval:   Duration{time.Second},
+				RateLimit:      4,
+				ServerAddr:     NetAddress{Host: "localhost", Port: 8080},
+			},
+			expectedErr: false,
+		},
+		{
+			name:        "incorrect config",
+			data:        []byte(`incorrect config`),
+			expectedErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			filename, err := generateConfigFile(tt.data)
+			require.NoError(t, err)
+			defer os.Remove(filename)
+
+			cfg := AgentConfig{}
+			err = cfg.parseFile(filename)
+			assert.Equal(t, tt.expectedErr, err != nil)
+
+			assert.Equal(t, tt.expectedCfg, cfg)
+		})
+	}
+}
+
+func generateConfigFile(data []byte) (string, error) {
+	file, err := os.CreateTemp(os.TempDir(), "temp.*.cfg")
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+	_, err = file.Write(data)
+	if err != nil {
+		return "", err
+	}
+	return file.Name(), nil
 }

@@ -22,6 +22,7 @@ func TestWithLogging(t *testing.T) {
 
 	file, err := os.CreateTemp(t.TempDir(), "temp.*.log")
 	require.NoError(t, err)
+	defer os.Remove(file.Name())
 	defer file.Close()
 	cfg := zap.Config{
 		Level:            zap.NewAtomicLevelAt(zap.InfoLevel),
