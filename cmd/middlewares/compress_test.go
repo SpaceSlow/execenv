@@ -46,6 +46,7 @@ func TestWithCompressing_compressedResponse(t *testing.T) {
 					http.Error(w, "cannot read request body", http.StatusInternalServerError)
 				}
 				w.Header().Add("Content-Type", "text/html")
+				w.WriteHeader(http.StatusOK)
 				w.Write(data)
 			}))
 
@@ -54,6 +55,7 @@ func TestWithCompressing_compressedResponse(t *testing.T) {
 
 			assert.Equal(t, tt.wantStatusCode, rr.Code)
 			if tt.request.Body != nil {
+				assert.Equal(t, CompressionAlgorithm, rr.Header().Get("Content-Encoding"))
 				assert.Less(t, int64(rr.Body.Len()), tt.request.ContentLength)
 			}
 		})
@@ -107,7 +109,7 @@ func randStringBytes(n int) string {
 func generateCompressRequest() *http.Request {
 	data, _ := metrics.Compress([]byte(randStringBytes(rand.Intn(500) + 500)))
 	req, _ := http.NewRequest([]string{http.MethodGet, http.MethodPost}[rand.Intn(2)], "https://example.com", bytes.NewReader(data))
-	req.Header.Add("Content-Encoding", "gzip")
+	req.Header.Add("Content-Encoding", CompressionAlgorithm)
 	return req
 }
 
@@ -115,14 +117,14 @@ func generateRequestWithLargeText(length int) *http.Request {
 	req, _ := http.NewRequest(
 		[]string{http.MethodGet, http.MethodPost}[rand.Intn(2)],
 		"https://example.com",
-		bytes.NewReader([]byte(randStringBytes(rand.Intn(500)+500))),
+		bytes.NewReader([]byte(randStringBytes(length))),
 	)
-	req.Header.Add("Accept-Encoding", "gzip")
+	req.Header.Add("Accept-Encoding", CompressionAlgorithm)
 	return req
 }
 
 func requestWithNilBody() *http.Request {
 	req, _ := http.NewRequest([]string{http.MethodGet, http.MethodPost}[rand.Intn(2)], "https://example.com", nil)
-	req.Header.Add("Accept-Encoding", "gzip")
+	req.Header.Add("Accept-Encoding", CompressionAlgorithm)
 	return req
 }
