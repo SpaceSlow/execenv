@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_compress(t *testing.T) {
+func TestCompress(t *testing.T) {
 	tests := []struct {
 		name string
 		data []byte
@@ -56,7 +56,7 @@ Omnis cupiditate tempore sit corporis nam et tempore a.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := compress(tt.data)
+			got, err := Compress(tt.data)
 			require.NoError(t, err)
 			assert.Less(t, len(got), len(tt.data))
 		})
