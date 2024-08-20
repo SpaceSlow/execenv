@@ -22,8 +22,8 @@ func (s *MockCheckStorage) CheckConnection() bool {
 
 func TestDBHandler_Ping(t *testing.T) {
 	tests := []struct {
-		name           string
 		storage        storages.ICheckConnection
+		name           string
 		expectedStatus int
 	}{
 		{

@@ -93,10 +93,11 @@ func TestWithDecryption(t *testing.T) {
 				encryptData, err := rsa.EncryptPKCS1v15(rand.Reader, &cfg.PrivateKey().PublicKey, tt.reqBody)
 				require.NoError(t, err)
 				req, err = http.NewRequest(tt.method, "https://example.com", bytes.NewReader(encryptData))
+				require.NoError(t, err)
 			} else {
 				req, err = http.NewRequest(tt.method, "https://example.com", nil)
+				require.NoError(t, err)
 			}
-			require.NoError(t, err)
 
 			rr := httptest.NewRecorder()
 			handler.ServeHTTP(rr, req)

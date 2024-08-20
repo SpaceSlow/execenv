@@ -32,6 +32,7 @@ func TestWithLogging(t *testing.T) {
 		ErrorOutputPaths: []string{"stderr"},
 	}
 	logger.Log, err = cfg.Build()
+	require.NoError(t, err)
 
 	handler := WithLogging(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(expectedDuration)

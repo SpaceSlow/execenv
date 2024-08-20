@@ -17,8 +17,8 @@ const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567
 
 func TestWithCompressing_compressedResponse(t *testing.T) {
 	tests := []struct {
-		name           string
 		request        *http.Request
+		name           string
 		wantStatusCode int
 	}{
 		{
@@ -66,8 +66,8 @@ func TestWithCompressing_compressedResponse(t *testing.T) {
 
 func TestWithCompressing_compressedRequest(t *testing.T) {
 	tests := []struct {
-		name           string
 		request        *http.Request
+		name           string
 		wantStatusCode int
 	}{
 		{

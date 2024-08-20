@@ -19,8 +19,7 @@ func NewCheckConnectionHandler(storage storages.MetricStorage) *CheckConnectionH
 
 // Ping проверяет соединение с БД.
 func (h CheckConnectionHandler) Ping(res http.ResponseWriter, _ *http.Request) {
-	checkStorage, ok := h.storage.(storages.ICheckConnection)
-	if ok && checkStorage.CheckConnection() {
+	if h.storage.CheckConnection() {
 		res.WriteHeader(http.StatusOK)
 		return
 	}
