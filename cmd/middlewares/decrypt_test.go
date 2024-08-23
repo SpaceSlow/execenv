@@ -81,8 +81,8 @@ func TestWithDecryption(t *testing.T) {
 				if r.Body == nil {
 					return
 				}
-				data, err := io.ReadAll(r.Body)
-				if err != nil {
+				data, readErr := io.ReadAll(r.Body)
+				if readErr != nil {
 					http.Error(w, "cannot read request body", http.StatusInternalServerError)
 				}
 				w.Write(data)
@@ -90,8 +90,8 @@ func TestWithDecryption(t *testing.T) {
 
 			var req *http.Request
 			if tt.reqBody != nil {
-				encryptData, err := rsa.EncryptPKCS1v15(rand.Reader, &cfg.PrivateKey().PublicKey, tt.reqBody)
-				require.NoError(t, err)
+				encryptData, encErr := rsa.EncryptPKCS1v15(rand.Reader, &cfg.PrivateKey().PublicKey, tt.reqBody)
+				require.NoError(t, encErr)
 				req, err = http.NewRequest(tt.method, "https://example.com", bytes.NewReader(encryptData))
 				require.NoError(t, err)
 			} else {
