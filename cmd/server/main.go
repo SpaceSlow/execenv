@@ -14,6 +14,7 @@ func main() {
 		middlewares.WithSigning,
 		middlewares.WithCompressing,
 		middlewares.WithDecryption,
+		middlewares.WithCheckingTrustedSubnet,
 		middlewares.WithLogging,
 	}
 	if err := RunServer(middlewareHandlers...); err != nil {

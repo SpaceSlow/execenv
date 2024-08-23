@@ -13,7 +13,7 @@ var (
 )
 
 type CIDR struct {
-	net.IPNet
+	*net.IPNet
 }
 
 func NewCIDR(s string) CIDR {
@@ -34,7 +34,7 @@ func (c *CIDR) Set(s string) error {
 	if err != nil {
 		return fmt.Errorf("parse cidr error: %w", err)
 	}
-	*c = CIDR{*parsedCIDR}
+	*c = CIDR{parsedCIDR}
 	return nil
 }
 
