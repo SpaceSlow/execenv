@@ -64,9 +64,9 @@ var defaultServerConfig = ServerConfig{
 type ServerConfig struct {
 	StoragePath     string          `env:"FILE_STORAGE_PATH" json:"store_file"`
 	DatabaseDSN     string          `env:"DATABASE_DSN" json:"database_dsn"`
-	Key             string          `env:"KEY"`
+	Key             string          `env:"KEY" json:"key"`
 	PrivateKeyFile  string          `env:"CRYPTO_KEY" json:"crypto_key"`
-	ConfigFilePath  string          `env:"CONFIG"`
+	ConfigFilePath  string          `env:"CONFIG" json:"-"`
 	Delays          []time.Duration `json:"-"`
 	privateKey      *rsa.PrivateKey
 	ServerAddr      NetAddress    `env:"ADDRESS" json:"address"`
@@ -199,14 +199,14 @@ var defaultAgentConfig = AgentConfig{
 
 // AgentConfig структура для конфигурации агента сбора метрик.
 type AgentConfig struct {
-	CertFile       string     `env:"CRYPTO_KEY"`
-	Key            string     `env:"KEY"`
-	ConfigFilePath string     `env:"CONFIG"`
-	ServerAddr     NetAddress `env:"ADDRESS"`
-	Delays         []time.Duration
-	ReportInterval Duration `env:"REPORT_INTERVAL"`
-	PollInterval   Duration `env:"POLL_INTERVAL"`
-	RateLimit      int      `env:"RATE_LIMIT"`
+	CertFile       string          `env:"CRYPTO_KEY" json:"crypto_key"`
+	Key            string          `env:"KEY" json:"key"`
+	ConfigFilePath string          `env:"CONFIG" json:"-"`
+	ServerAddr     NetAddress      `env:"ADDRESS" json:"address"`
+	Delays         []time.Duration `json:"-"`
+	ReportInterval Duration        `env:"REPORT_INTERVAL" json:"report_interval"`
+	PollInterval   Duration        `env:"POLL_INTERVAL" json:"poll_interval"`
+	RateLimit      int             `env:"RATE_LIMIT" json:"rate_limit"`
 }
 
 func (c *AgentConfig) parseFlags(programName string, args []string) error {

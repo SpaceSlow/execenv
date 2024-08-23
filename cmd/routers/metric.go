@@ -12,7 +12,7 @@ func MetricRouter(storage storages.MetricStorage) chi.Router {
 
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", handlers.MetricHandler{MetricStorage: storage}.List)
-		r.Get("/ping", handlers.DBHandler{MetricStorage: storage}.Ping)
+		r.Get("/ping", handlers.NewCheckConnectionHandler(storage).Ping)
 
 		r.Route("/update/", func(r chi.Router) {
 			r.Post("/{type}/{name}/{value}", handlers.MetricHandler{MetricStorage: storage}.Post)

@@ -29,7 +29,7 @@ func RetryFunc(f func() error, delays []time.Duration) chan error {
 	return errorCh
 }
 
-func compress(data []byte) ([]byte, error) {
+func Compress(data []byte) ([]byte, error) {
 	var b bytes.Buffer
 	w, err := gzip.NewWriterLevel(&b, gzip.BestCompression)
 	if err != nil {

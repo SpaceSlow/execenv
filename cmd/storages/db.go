@@ -12,7 +12,10 @@ import (
 	"github.com/SpaceSlow/execenv/cmd/metrics"
 )
 
-var _ MetricStorage = (*DBStorage)(nil)
+var (
+	_ MetricStorage    = (*DBStorage)(nil)
+	_ ICheckConnection = (*DBStorage)(nil)
+)
 
 // RetryDB является заместителем для sql.DB методов QueryRowContext и ExecContext, поддерживающие повторные запросы в случае неудач.
 type RetryDB struct {
@@ -66,6 +69,10 @@ func (db *RetryDB) ExecContext(ctx context.Context, query string, args ...any) (
 	err := <-metrics.RetryFunc(execContext, db.delays)
 
 	return <-resultCh, err
+}
+
+type ICheckConnection interface {
+	CheckConnection() bool
 }
 
 // DBStorage хранит метрики в БД.

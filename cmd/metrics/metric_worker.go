@@ -69,7 +69,7 @@ func (mw *MetricWorkers) Send(metrics []Metric) {
 		hash = hex.EncodeToString(h.Sum(nil))
 	}
 
-	data, err = compress(data)
+	data, err = Compress(data)
 	if err != nil {
 		mw.errorsCh <- err
 		return
