@@ -134,12 +134,14 @@ func (s *MemFileStorage) LoadMetricsFromFile() error {
 
 func (s *MemFileStorage) startStoreMetricsPerSecondsTask(duration time.Duration) {
 	logger.Log.Info("start store metrics task")
+	storeTicker := time.NewTicker(duration)
+	defer storeTicker.Stop()
 	for {
 		select {
 		case <-s.ctx.Done():
 			logger.Log.Info("store metrics task has been finished")
 			return
-		case <-time.After(duration):
+		case <-storeTicker.C:
 			err := s.SaveMetricsToFile()
 			if err != nil {
 				logger.Log.Error("not saved metrics")
