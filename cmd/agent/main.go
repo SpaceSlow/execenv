@@ -19,12 +19,13 @@ func main() {
 	}
 
 	url := "http://" + cfg.ServerAddr.String() + "/updates/"
-	pollInterval := time.Duration(cfg.PollInterval) * time.Second
-	reportInterval := time.Duration(cfg.ReportInterval) * time.Second
 
-	pollTick := time.Tick(pollInterval)
-	reportTick := time.Tick(reportInterval)
-	metricWorkers := metrics.NewMetricWorkers(cfg.RateLimit, url, cfg.Key, cfg.Delays)
+	pollTick := time.Tick(cfg.PollInterval.Duration)
+	reportTick := time.Tick(cfg.ReportInterval.Duration)
+	metricWorkers, err := metrics.NewMetricWorkers(cfg.RateLimit, url, cfg.Key, cfg.CertFile, cfg.Delays)
+	if err != nil {
+		log.Fatalf("stopped agent: %s", err)
+	}
 	sendCh := make(chan []metrics.Metric, cfg.RateLimit)
 	pollCh := make(chan []metrics.Metric, 1)
 
@@ -43,6 +44,12 @@ func main() {
 	for {
 		select {
 		case <-closed:
+			sendCh <- <-pollCh
+			if err = <-metricWorkers.Err(); err != nil {
+				log.Println(err)
+			} else {
+				log.Println("sended metrics")
+			}
 			close(sendCh)
 			close(pollCh)
 			metricWorkers.Close()
@@ -53,7 +60,7 @@ func main() {
 		case <-reportTick:
 			metricSlice := <-pollCh
 			sendCh <- metricSlice
-		case err := <-metricWorkers.Err():
+		case err = <-metricWorkers.Err():
 			if err != nil {
 				log.Println(err)
 				continue
