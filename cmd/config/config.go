@@ -56,6 +56,7 @@ var defaultServerConfig = ServerConfig{
 	DatabaseDSN:     "",
 	Key:             "",
 	PrivateKeyFile:  "",
+	TrustedSubnet:   NewCIDR(""),
 	Delays:          []time.Duration{time.Second, 3 * time.Second, 5 * time.Second},
 	TimeoutShutdown: 500 * time.Second,
 }
@@ -69,6 +70,7 @@ type ServerConfig struct {
 	ConfigFilePath  string          `env:"CONFIG" json:"-"`
 	Delays          []time.Duration `json:"-"`
 	privateKey      *rsa.PrivateKey
+	TrustedSubnet   CIDR          `env:"TRUSTED_SUBNET" json:"trusted_subnet"`
 	ServerAddr      NetAddress    `env:"ADDRESS" json:"address"`
 	StoreInterval   Duration      `env:"STORE_INTERVAL" json:"store_interval"`
 	TimeoutShutdown time.Duration `json:"-"`
@@ -88,6 +90,8 @@ func (c *ServerConfig) parseFlags(programName string, args []string) error {
 
 	flagSet.StringVar(&c.ConfigFilePath, "c", c.ConfigFilePath, "config file path")
 	flagSet.StringVar(&c.ConfigFilePath, "config", c.ConfigFilePath, "config file path")
+
+	flagSet.Var(&c.TrustedSubnet, "t", "trusted subnet")
 
 	err := flagSet.Parse(args)
 	if err != nil {

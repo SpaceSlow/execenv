@@ -36,6 +36,7 @@ func TestServerConfig_parseFlags(t *testing.T) {
 				NeededRestore: defaultServerConfig.NeededRestore,
 				DatabaseDSN:   defaultServerConfig.DatabaseDSN,
 				Key:           defaultServerConfig.Key,
+				TrustedSubnet: defaultServerConfig.TrustedSubnet,
 			},
 		},
 		{
@@ -50,6 +51,7 @@ func TestServerConfig_parseFlags(t *testing.T) {
 				NeededRestore: defaultServerConfig.NeededRestore,
 				DatabaseDSN:   defaultServerConfig.DatabaseDSN,
 				Key:           defaultServerConfig.Key,
+				TrustedSubnet: defaultServerConfig.TrustedSubnet,
 			},
 		},
 		{
@@ -64,6 +66,7 @@ func TestServerConfig_parseFlags(t *testing.T) {
 				NeededRestore: defaultServerConfig.NeededRestore,
 				DatabaseDSN:   defaultServerConfig.DatabaseDSN,
 				Key:           defaultServerConfig.Key,
+				TrustedSubnet: defaultServerConfig.TrustedSubnet,
 			},
 		},
 		{
@@ -78,6 +81,7 @@ func TestServerConfig_parseFlags(t *testing.T) {
 				NeededRestore: true,
 				DatabaseDSN:   defaultServerConfig.DatabaseDSN,
 				Key:           defaultServerConfig.Key,
+				TrustedSubnet: defaultServerConfig.TrustedSubnet,
 			},
 		},
 		{
@@ -92,6 +96,7 @@ func TestServerConfig_parseFlags(t *testing.T) {
 				NeededRestore: defaultServerConfig.NeededRestore,
 				DatabaseDSN:   "postgres://username:password@localhost:5432/database_name",
 				Key:           defaultServerConfig.Key,
+				TrustedSubnet: defaultServerConfig.TrustedSubnet,
 			},
 		},
 		{
@@ -106,6 +111,22 @@ func TestServerConfig_parseFlags(t *testing.T) {
 				NeededRestore: defaultServerConfig.NeededRestore,
 				DatabaseDSN:   defaultServerConfig.DatabaseDSN,
 				Key:           "non-standard-key",
+				TrustedSubnet: defaultServerConfig.TrustedSubnet,
+			},
+		},
+		{
+			name: "setting trusted subnet flag",
+			args: []string{
+				"-t=10.9.9.9/23",
+			},
+			wantCfg: ServerConfig{
+				ServerAddr:    defaultServerConfig.ServerAddr,
+				StoreInterval: defaultServerConfig.StoreInterval,
+				StoragePath:   defaultServerConfig.StoragePath,
+				NeededRestore: defaultServerConfig.NeededRestore,
+				DatabaseDSN:   defaultServerConfig.DatabaseDSN,
+				Key:           defaultServerConfig.Key,
+				TrustedSubnet: NewCIDR("10.9.9.9/23"),
 			},
 		},
 		{
@@ -117,6 +138,7 @@ func TestServerConfig_parseFlags(t *testing.T) {
 				"-f=/tmp/some-file.json",
 				"-k=non-standard-key",
 				"-d=postgres://username:password@localhost:5432/database_name",
+				"-t=192.168.1.0/24",
 			},
 			wantCfg: ServerConfig{
 				ServerAddr: NetAddress{
@@ -128,6 +150,7 @@ func TestServerConfig_parseFlags(t *testing.T) {
 				NeededRestore: true,
 				DatabaseDSN:   "postgres://username:password@localhost:5432/database_name",
 				Key:           "non-standard-key",
+				TrustedSubnet: NewCIDR("192.168.1.0/24"),
 			},
 		},
 	}
@@ -146,6 +169,7 @@ func TestServerConfig_parseFlags(t *testing.T) {
 			assert.Equalf(t, tt.wantCfg.NeededRestore, config.NeededRestore, `expected NeedRestore: %v, got: %v`, tt.wantCfg.NeededRestore, config.NeededRestore)
 			assert.Equalf(t, tt.wantCfg.DatabaseDSN, config.DatabaseDSN, `expected DatabaseDSN: "%v", got: "%v"`, tt.wantCfg.DatabaseDSN, config.DatabaseDSN)
 			assert.Equalf(t, tt.wantCfg.Key, config.Key, `expected Key: "%v", got: "%v"`, tt.wantCfg.Key, config.Key)
+			assert.Equalf(t, tt.wantCfg.TrustedSubnet, config.TrustedSubnet, `expected TrustedSubnet: "%v", got: "%v"`, tt.wantCfg.TrustedSubnet, config.TrustedSubnet)
 		})
 	}
 }
@@ -179,8 +203,18 @@ func Test_getServerConfig(t *testing.T) {
 				"DATABASE_DSN":      "postgres://env:env@localhost:5432/env",
 				"KEY":               "env",
 				"CRYPTO_KEY":        "/tmp/cert.env.pem",
+				"TRUSTED_SUBNET":    "192.168.0.0/24",
 			},
-			flags: []string{"-a=:8080", "-f=/tmp/flag", "-i=0s", "-r", "-d=postgres://flag:flag@localhost:5432/flag", "-k=flag", "-crypto-key=/tmp/cert.flag.pem"},
+			flags: []string{
+				"-a=:8080",
+				"-f=/tmp/flag",
+				"-i=0s",
+				"-r",
+				"-d=postgres://flag:flag@localhost:5432/flag",
+				"-k=flag",
+				"-crypto-key=/tmp/cert.flag.pem",
+				"-t=10.10.1.0/16",
+			},
 			want: ServerConfig{
 				StoragePath:    "/tmp/env",
 				DatabaseDSN:    "postgres://env:env@localhost:5432/env",
@@ -190,11 +224,21 @@ func Test_getServerConfig(t *testing.T) {
 				StoreInterval:  Duration{100 * time.Second},
 				NeededRestore:  false,
 				PrivateKeyFile: "/tmp/cert.env.pem",
+				TrustedSubnet:  NewCIDR("192.168.0.0/24"),
 			},
 		},
 		{
-			name:  "only flags",
-			flags: []string{"-a=:8080", "-f=/tmp/flag", "-i=0s", "-r", "-d=postgres://flag:flag@localhost:5432/flag", "-k=flag", "-crypto-key=/tmp/cert.flag.pem"},
+			name: "only flags",
+			flags: []string{
+				"-a=:8080",
+				"-f=/tmp/flag",
+				"-i=0s",
+				"-r",
+				"-d=postgres://flag:flag@localhost:5432/flag",
+				"-k=flag",
+				"-crypto-key=/tmp/cert.flag.pem",
+				"-t=10.10.1.0/16",
+			},
 			want: ServerConfig{
 				StoragePath:    "/tmp/flag",
 				DatabaseDSN:    "postgres://flag:flag@localhost:5432/flag",
@@ -204,6 +248,7 @@ func Test_getServerConfig(t *testing.T) {
 				StoreInterval:  Duration{0},
 				NeededRestore:  true,
 				PrivateKeyFile: "/tmp/cert.flag.pem",
+				TrustedSubnet:  NewCIDR("10.10.1.0/16"),
 			},
 		},
 	}
@@ -253,7 +298,8 @@ func TestServerConfig_parseFile(t *testing.T) {
 					"store_file": "/path/to/file.db", 
 					"database_dsn": "postgres://file:file@localhost:5432/file",
 					"key": "key",
-					"crypto_key": "/path/to/private.key"
+					"crypto_key": "/path/to/private.key",
+					"trusted_subnet": "10.10.1.0/16"
 				} 
 			`),
 			expectedCfg: ServerConfig{
@@ -265,6 +311,7 @@ func TestServerConfig_parseFile(t *testing.T) {
 				ServerAddr:     NetAddress{Host: "localhost", Port: 8080},
 				StoreInterval:  Duration{time.Second},
 				NeededRestore:  true,
+				TrustedSubnet:  NewCIDR("10.10.1.0/16"),
 			},
 			expectedErr: false,
 		},
