@@ -8,6 +8,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/SpaceSlow/execenv/cmd/metrics"
 	"os"
 	"sync"
 	"time"
@@ -206,6 +207,7 @@ type AgentConfig struct {
 	CertFile       string          `env:"CRYPTO_KEY" json:"crypto_key"`
 	Key            string          `env:"KEY" json:"key"`
 	ConfigFilePath string          `env:"CONFIG" json:"-"`
+	LocalIP        string          `json:"-"`
 	ServerAddr     NetAddress      `env:"ADDRESS" json:"address"`
 	Delays         []time.Duration `json:"-"`
 	ReportInterval Duration        `env:"REPORT_INTERVAL" json:"report_interval"`
@@ -262,6 +264,7 @@ func GetAgentConfig() (*AgentConfig, error) {
 	var err error
 	once.Do(func() {
 		agentConfig, err = getAgentConfig(os.Args[0], os.Args[1:])
+		agentConfig.LocalIP, err = metrics.OutboundIP(agentConfig.ServerAddr.String())
 	})
 	return agentConfig, err
 }

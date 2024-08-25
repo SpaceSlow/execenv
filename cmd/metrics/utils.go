@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
+	"net"
 	"sync"
 	"time"
 )
@@ -68,4 +69,16 @@ func fanIn(chs ...chan []Metric) chan []Metric {
 	}()
 
 	return outCh
+}
+
+func OutboundIP(serverAddr string) (string, error) {
+	conn, err := net.Dial("tcp", serverAddr)
+	if err != nil {
+		return "", nil
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.TCPAddr)
+
+	return localAddr.IP.String(), nil
 }

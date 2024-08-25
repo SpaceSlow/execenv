@@ -7,6 +7,7 @@ import (
 	"github.com/SpaceSlow/execenv/cmd/config"
 )
 
+// WithCheckingTrustedSubnet middleware предназначена для проверки исходящих запросов из доверенной подсети.
 func WithCheckingTrustedSubnet(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cfg, err := config.GetServerConfig()

@@ -26,6 +26,7 @@ type MetricWorkers struct {
 	metricsForSend chan []Metric
 	errorsCh       chan error
 
+	localIP   string
 	url       string
 	key       string
 	cert      *rsa.PublicKey
@@ -33,7 +34,7 @@ type MetricWorkers struct {
 	pollCount atomic.Int64
 }
 
-func NewMetricWorkers(numWorkers int, url, key, certFile string, delays []time.Duration) (*MetricWorkers, error) {
+func NewMetricWorkers(numWorkers int, localIP, url, key, certFile string, delays []time.Duration) (*MetricWorkers, error) {
 	var (
 		cert *rsa.PublicKey
 		err  error
@@ -47,6 +48,7 @@ func NewMetricWorkers(numWorkers int, url, key, certFile string, delays []time.D
 	return &MetricWorkers{
 		metricsForSend: make(chan []Metric, numWorkers),
 		errorsCh:       make(chan error, numWorkers),
+		localIP:        localIP,
 		url:            url,
 		key:            key,
 		cert:           cert,
@@ -90,6 +92,7 @@ func (mw *MetricWorkers) Send(metrics []Metric) {
 	}
 	req.Header.Set("Content-Encoding", "gzip")
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Real-IP", mw.localIP)
 
 	if hash != "" {
 		req.Header.Set("Hash", hash)

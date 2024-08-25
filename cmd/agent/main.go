@@ -22,7 +22,7 @@ func main() {
 
 	pollTick := time.Tick(cfg.PollInterval.Duration)
 	reportTick := time.Tick(cfg.ReportInterval.Duration)
-	metricWorkers, err := metrics.NewMetricWorkers(cfg.RateLimit, url, cfg.Key, cfg.CertFile, cfg.Delays)
+	metricWorkers, err := metrics.NewMetricWorkers(cfg.RateLimit, cfg.LocalIP, url, cfg.Key, cfg.CertFile, cfg.Delays)
 	if err != nil {
 		log.Fatalf("stopped agent: %s", err)
 	}
