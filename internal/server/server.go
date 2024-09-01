@@ -2,9 +2,7 @@ package server
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/http"
 	"os/signal"
 	"syscall"
 
@@ -13,56 +11,65 @@ import (
 
 	"github.com/SpaceSlow/execenv/internal/config"
 	"github.com/SpaceSlow/execenv/internal/logger"
-	"github.com/SpaceSlow/execenv/internal/routers"
 	"github.com/SpaceSlow/execenv/internal/storages"
 )
 
-func RunServer(middlewareHandlers ...func(next http.Handler) http.Handler) error {
-	rootCtx, cancelCtx := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+type Server struct {
+	ctx context.Context
+
+	storage        storages.MetricStorage
+	config         *config.ServerConfig
+	serverStrategy ShutdownRunner
+}
+
+func NewServer() (*Server, error) {
+	var (
+		srv Server
+		err error
+	)
+
+	if err = logger.Initialize(zap.InfoLevel.String()); err != nil {
+		return nil, err
+	}
+	srv.ctx = context.Background()
+
+	srv.config, err = config.GetServerConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	err = srv.setStorage()
+	if err != nil {
+		return nil, err
+	}
+
+	srv.setStrategy()
+
+	return &srv, nil
+}
+
+func (s *Server) Run() error {
+	rootCtx, cancelCtx := signal.NotifyContext(s.ctx, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	defer cancelCtx()
 
-	if err := logger.Initialize(zap.InfoLevel.String()); err != nil {
-		return err
-	}
-
-	cfg, err := config.GetServerConfig()
-	if err != nil {
-		return err
-	}
-
 	g, ctx := errgroup.WithContext(rootCtx)
+	s.ctx = ctx
+
 	context.AfterFunc(ctx, func() {
-		timeoutCtx, cancelCtx := context.WithTimeout(context.Background(), cfg.TimeoutShutdown) //nolint
+		timeoutCtx, cancelCtx := context.WithTimeout(context.Background(), s.config.TimeoutShutdown)
 		defer cancelCtx()
 
 		<-timeoutCtx.Done()
 		logger.Log.Fatal("failed to gracefully shutdown the service")
 	})
 
-	var storage storages.MetricStorage
-	if cfg.DatabaseDSN != "" {
-		storage, err = storages.NewDBStorage(ctx, cfg.DatabaseDSN, cfg.Delays)
-		logger.Log.Info("using storage DB", zap.String("DSN", cfg.DatabaseDSN))
-	} else {
-		storage, err = storages.NewMemFileStorage(ctx, cfg.StoragePath, cfg.StoreInterval.Duration, cfg.NeededRestore)
-	}
-	if err != nil {
-		return err
-	}
-
 	g.Go(func() error {
 		defer logger.Log.Info("closed storage")
 
 		<-ctx.Done()
 
-		return storage.Close()
+		return s.storage.Close()
 	})
-
-	mux := routers.MetricRouter(storage).(http.Handler)
-	for _, middleware := range middlewareHandlers {
-		mux = middleware(mux)
-	}
-	srv := &http.Server{Addr: cfg.ServerAddr.String(), Handler: mux}
 
 	g.Go(func() (err error) {
 		defer func() {
@@ -71,13 +78,7 @@ func RunServer(middlewareHandlers ...func(next http.Handler) http.Handler) error
 				err = fmt.Errorf("a panic occurred: %v", errRec)
 			}
 		}()
-		if err = srv.ListenAndServe(); err != nil {
-			if errors.Is(err, http.ErrServerClosed) {
-				return
-			}
-			return fmt.Errorf("listen and server has failed: %w", err)
-		}
-		return nil
+		return s.serverStrategy.Run()
 	})
 
 	g.Go(func() error {
@@ -85,12 +86,9 @@ func RunServer(middlewareHandlers ...func(next http.Handler) http.Handler) error
 
 		<-ctx.Done()
 
-		shutdownTimeoutCtx, cancelShutdownTimeoutCtx := context.WithTimeout(context.Background(), cfg.TimeoutShutdown)
+		shutdownTimeoutCtx, cancelShutdownTimeoutCtx := context.WithTimeout(context.Background(), s.config.TimeoutShutdown)
 		defer cancelShutdownTimeoutCtx()
-		if err := srv.Shutdown(shutdownTimeoutCtx); err != nil {
-			logger.Log.Error(fmt.Sprintf("an error occurred during server shutdown: %s", err))
-		}
-		return nil
+		return s.serverStrategy.Shutdown(shutdownTimeoutCtx)
 	})
 
 	if err := g.Wait(); err != nil {
@@ -98,4 +96,21 @@ func RunServer(middlewareHandlers ...func(next http.Handler) http.Handler) error
 	}
 
 	return nil
+}
+
+func (s *Server) setStorage() error {
+	var err error
+
+	if s.config.DatabaseDSN != "" {
+		s.storage, err = storages.NewDBStorage(s.ctx, s.config.DatabaseDSN, s.config.Delays)
+		logger.Log.Info("using storage DB", zap.String("DSN", s.config.DatabaseDSN))
+	} else {
+		s.storage, err = storages.NewMemFileStorage(s.ctx, s.config.StoragePath, s.config.StoreInterval.Duration, s.config.NeededRestore)
+	}
+
+	return err
+}
+
+func (s *Server) setStrategy() {
+	s.serverStrategy = newHttpStrategy(s.config.ServerAddr.String(), s.storage)
 }
