@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/SpaceSlow/execenv/cmd/metrics"
+	"github.com/SpaceSlow/execenv/internal/metrics"
 )
 
 func TestMemFileStorage_Add(t *testing.T) {

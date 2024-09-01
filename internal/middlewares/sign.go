@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/SpaceSlow/execenv/cmd/config"
+	"github.com/SpaceSlow/execenv/internal/config"
 )
 
 var ErrHashEmptyBody = errors.New("hash empty body error")

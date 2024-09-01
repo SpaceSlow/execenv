@@ -6,7 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/SpaceSlow/execenv/cmd/logger"
+	"github.com/SpaceSlow/execenv/internal/logger"
 )
 
 var _ http.ResponseWriter = (*loggingResponseWriter)(nil)

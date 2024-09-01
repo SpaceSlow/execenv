@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/SpaceSlow/execenv/cmd/logger"
+	"github.com/SpaceSlow/execenv/internal/logger"
 )
 
 func TestWithLogging(t *testing.T) {

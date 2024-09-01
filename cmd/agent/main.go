@@ -7,8 +7,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/SpaceSlow/execenv/cmd/config"
-	"github.com/SpaceSlow/execenv/cmd/metrics"
+	"github.com/SpaceSlow/execenv/internal/config"
+	"github.com/SpaceSlow/execenv/internal/metrics"
 )
 
 func main() {

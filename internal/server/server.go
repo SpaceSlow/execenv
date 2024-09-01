@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"context"
@@ -11,10 +11,10 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/SpaceSlow/execenv/cmd/config"
-	"github.com/SpaceSlow/execenv/cmd/logger"
-	"github.com/SpaceSlow/execenv/cmd/routers"
-	"github.com/SpaceSlow/execenv/cmd/storages"
+	"github.com/SpaceSlow/execenv/internal/config"
+	"github.com/SpaceSlow/execenv/internal/logger"
+	"github.com/SpaceSlow/execenv/internal/routers"
+	"github.com/SpaceSlow/execenv/internal/storages"
 )
 
 func RunServer(middlewareHandlers ...func(next http.Handler) http.Handler) error {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/SpaceSlow/execenv/cmd/storages"
+	"github.com/SpaceSlow/execenv/internal/storages"
 )
 
 var _ storages.ICheckConnection = (*MockCheckStorage)(nil)

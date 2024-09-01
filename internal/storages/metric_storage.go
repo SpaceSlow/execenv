@@ -1,6 +1,8 @@
 package storages
 
-import "github.com/SpaceSlow/execenv/cmd/metrics"
+import (
+	"github.com/SpaceSlow/execenv/internal/metrics"
+)
 
 // MetricStorage является интерфейсом для хранения метрик.
 type MetricStorage interface {

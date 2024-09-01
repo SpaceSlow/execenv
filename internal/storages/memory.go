@@ -3,7 +3,7 @@ package storages
 import (
 	"sync"
 
-	"github.com/SpaceSlow/execenv/cmd/metrics"
+	"github.com/SpaceSlow/execenv/internal/metrics"
 )
 
 var _ MetricStorage = (*MemStorage)(nil)

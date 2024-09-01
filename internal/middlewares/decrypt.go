@@ -7,7 +7,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/SpaceSlow/execenv/cmd/config"
+	"github.com/SpaceSlow/execenv/internal/config"
 )
 
 // WithDecryption middleware предназначенная для расшифрования данных с агента.

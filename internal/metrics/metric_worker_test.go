@@ -15,7 +15,7 @@ import (
 )
 
 func TestMetricWorkers_Err(t *testing.T) {
-	mw, err := NewMetricWorkers(1, "", "", "", []time.Duration{})
+	mw, err := NewMetricWorkers(1, "", "", "", "", []time.Duration{})
 	require.NoError(t, err)
 	mw.errorsCh <- errors.New("some error")
 	mw.Close()
@@ -24,7 +24,7 @@ func TestMetricWorkers_Err(t *testing.T) {
 }
 
 func TestMetricWorkers_getGopsutilMetrics(t *testing.T) {
-	mw, err := NewMetricWorkers(1, "", "", "", []time.Duration{})
+	mw, err := NewMetricWorkers(1, "", "", "", "", []time.Duration{})
 	require.NoError(t, err)
 	metrics := <-mw.getGopsutilMetrics()
 	assert.Greater(t, len(metrics), 0)
@@ -35,7 +35,7 @@ func TestMetricWorkers_getGopsutilMetrics(t *testing.T) {
 }
 
 func TestMetricWorkers_getRuntimeMetrics(t *testing.T) {
-	mw, err := NewMetricWorkers(1, "", "", "", []time.Duration{})
+	mw, err := NewMetricWorkers(1, "", "", "", "", []time.Duration{})
 	require.NoError(t, err)
 	metrics := <-mw.getRuntimeMetrics()
 	assert.Greater(t, len(metrics), 0)

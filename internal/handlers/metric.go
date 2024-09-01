@@ -7,8 +7,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/SpaceSlow/execenv/cmd/metrics"
-	"github.com/SpaceSlow/execenv/cmd/storages"
+	"github.com/SpaceSlow/execenv/internal/metrics"
+	"github.com/SpaceSlow/execenv/internal/storages"
 )
 
 // MetricHandler хэндлер для обработки запросов text/plain-формата.

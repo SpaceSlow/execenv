@@ -9,8 +9,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/SpaceSlow/execenv/cmd/routers"
-	"github.com/SpaceSlow/execenv/cmd/storages"
+	"github.com/SpaceSlow/execenv/internal/routers"
+	"github.com/SpaceSlow/execenv/internal/storages"
 )
 
 func Example() {

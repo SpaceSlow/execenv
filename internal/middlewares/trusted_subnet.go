@@ -4,7 +4,7 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/SpaceSlow/execenv/cmd/config"
+	"github.com/SpaceSlow/execenv/internal/config"
 )
 
 // WithCheckingTrustedSubnet middleware предназначена для проверки исходящих запросов из доверенной подсети.

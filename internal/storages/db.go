@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-	"github.com/SpaceSlow/execenv/cmd/metrics"
+	"github.com/SpaceSlow/execenv/internal/metrics"
 )
 
 var (

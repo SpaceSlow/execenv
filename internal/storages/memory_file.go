@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/SpaceSlow/execenv/cmd/logger"
-	"github.com/SpaceSlow/execenv/cmd/metrics"
+	"github.com/SpaceSlow/execenv/internal/logger"
+	"github.com/SpaceSlow/execenv/internal/metrics"
 )
 
 var _ MetricStorage = (*MemFileStorage)(nil)

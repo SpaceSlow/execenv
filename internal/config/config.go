@@ -8,12 +8,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/SpaceSlow/execenv/cmd/metrics"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/caarlos0/env"
+
+	"github.com/SpaceSlow/execenv/internal/metrics"
 )
 
 var (

@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/SpaceSlow/execenv/cmd/metrics"
-	"github.com/SpaceSlow/execenv/cmd/storages"
+	"github.com/SpaceSlow/execenv/internal/metrics"
+	"github.com/SpaceSlow/execenv/internal/storages"
 )
 
 // JSONMetricHandler хэндлер для обработки запросов в JSON-формате.
