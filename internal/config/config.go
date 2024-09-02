@@ -52,31 +52,33 @@ var defaultServerConfig = ServerConfig{
 		Host: "localhost",
 		Port: 8080,
 	},
-	StoreInterval:   Duration{300 * time.Second},
-	StoragePath:     "/tmp/metrics-db.json",
-	NeededRestore:   true,
-	DatabaseDSN:     "",
-	Key:             "",
-	PrivateKeyFile:  "",
-	TrustedSubnet:   NewCIDR(""),
-	Delays:          []time.Duration{time.Second, 3 * time.Second, 5 * time.Second},
-	TimeoutShutdown: 500 * time.Second,
+	StoreInterval:     Duration{300 * time.Second},
+	StoragePath:       "/tmp/metrics-db.json",
+	NeededRestore:     true,
+	StartedGRPCServer: false,
+	DatabaseDSN:       "",
+	Key:               "",
+	PrivateKeyFile:    "",
+	TrustedSubnet:     NewCIDR(""),
+	Delays:            []time.Duration{time.Second, 3 * time.Second, 5 * time.Second},
+	TimeoutShutdown:   500 * time.Second,
 }
 
 // ServerConfig структура для конфигурации сервера сбора метрик.
 type ServerConfig struct {
-	StoragePath     string          `env:"FILE_STORAGE_PATH" json:"store_file"`
-	DatabaseDSN     string          `env:"DATABASE_DSN" json:"database_dsn"`
-	Key             string          `env:"KEY" json:"key"`
-	PrivateKeyFile  string          `env:"CRYPTO_KEY" json:"crypto_key"`
-	ConfigFilePath  string          `env:"CONFIG" json:"-"`
-	Delays          []time.Duration `json:"-"`
-	privateKey      *rsa.PrivateKey
-	TrustedSubnet   CIDR          `env:"TRUSTED_SUBNET" json:"trusted_subnet"`
-	ServerAddr      NetAddress    `env:"ADDRESS" json:"address"`
-	StoreInterval   Duration      `env:"STORE_INTERVAL" json:"store_interval"`
-	TimeoutShutdown time.Duration `json:"-"`
-	NeededRestore   bool          `env:"RESTORE" json:"restore"`
+	StoragePath       string          `env:"FILE_STORAGE_PATH" json:"store_file"`
+	DatabaseDSN       string          `env:"DATABASE_DSN" json:"database_dsn"`
+	Key               string          `env:"KEY" json:"key"`
+	PrivateKeyFile    string          `env:"CRYPTO_KEY" json:"crypto_key"`
+	ConfigFilePath    string          `env:"CONFIG" json:"-"`
+	Delays            []time.Duration `json:"-"`
+	privateKey        *rsa.PrivateKey
+	TrustedSubnet     CIDR          `env:"TRUSTED_SUBNET" json:"trusted_subnet"`
+	ServerAddr        NetAddress    `env:"ADDRESS" json:"address"`
+	StoreInterval     Duration      `env:"STORE_INTERVAL" json:"store_interval"`
+	TimeoutShutdown   time.Duration `json:"-"`
+	NeededRestore     bool          `env:"RESTORE" json:"restore"`
+	StartedGRPCServer bool          `env:"GRPC" json:"grpc"`
 }
 
 func (c *ServerConfig) parseFlags(programName string, args []string) error {
@@ -86,6 +88,7 @@ func (c *ServerConfig) parseFlags(programName string, args []string) error {
 	flagSet.DurationVar(&c.StoreInterval.Duration, "i", c.StoreInterval.Duration, "store interval in secs (default 300 sec)")
 	flagSet.StringVar(&c.StoragePath, "f", c.StoragePath, "file storage path (default /tmp/metrics-db.json")
 	flagSet.BoolVar(&c.NeededRestore, "r", c.NeededRestore, "needed loading saved metrics from file (default true)")
+	flagSet.BoolVar(&c.StartedGRPCServer, "grpc", c.StartedGRPCServer, "started grpc server (default false)")
 	flagSet.StringVar(&c.DatabaseDSN, "d", c.DatabaseDSN, "PostgreSQL (ver. >=10) database DSN (example: postgres://username:password@localhost:5432/database_name")
 	flagSet.StringVar(&c.Key, "k", c.Key, "key for signing queries")
 	flagSet.StringVar(&c.PrivateKeyFile, "crypto-key", c.PrivateKeyFile, "path to cert file")

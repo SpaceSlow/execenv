@@ -112,5 +112,9 @@ func (s *Server) setStorage() error {
 }
 
 func (s *Server) setStrategy() {
+	if s.config.StartedGRPCServer {
+		s.serverStrategy = newGrpcStrategy(s.config.ServerAddr.String(), s.storage)
+		return
+	}
 	s.serverStrategy = newHttpStrategy(s.config.ServerAddr.String(), s.storage)
 }
