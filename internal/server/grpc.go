@@ -97,6 +97,20 @@ func (s *MetricServiceServer) GetMetric(ctx context.Context, in *pb.GetMetricReq
 	return &response, nil
 }
 
+// ListMetrics реализует интерфейс получения метрики.
+func (s *MetricServiceServer) ListMetrics(ctx context.Context, in *pb.ListMetricsRequest) (*pb.ListMetricsResponse, error) {
+	var response pb.ListMetricsResponse
+
+	metricSlice := s.storage.List()
+	response.Metrics = make([]*pb.Metric, 0, len(metricSlice))
+	for _, metric := range metricSlice {
+		m, _ := convertToProto(&metric)
+		response.Metrics = append(response.Metrics, m)
+	}
+
+	return &response, nil
+}
+
 func convertFromProto(m *pb.Metric) (*metrics.Metric, error) {
 	metric := &metrics.Metric{
 		Name: m.Id,
