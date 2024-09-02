@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/SpaceSlow/execenv/internal/middlewares"
@@ -29,7 +30,11 @@ func newHttpStrategy(address string, storage storages.MetricStorage) *httpStrate
 }
 
 func (s httpStrategy) Run() error {
-	return s.srv.ListenAndServe()
+	var err error
+	if err = s.srv.ListenAndServe(); err != nil && errors.Is(err, http.ErrServerClosed) {
+		return nil
+	}
+	return err
 }
 
 func (s httpStrategy) Shutdown(ctx context.Context) error {
