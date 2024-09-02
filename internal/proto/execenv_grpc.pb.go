@@ -19,10 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	MetricService_AddMetric_FullMethodName      = "/execenv.MetricService/AddMetric"
-	MetricService_BatchAddMetric_FullMethodName = "/execenv.MetricService/BatchAddMetric"
-	MetricService_GetMetric_FullMethodName      = "/execenv.MetricService/GetMetric"
-	MetricService_ListMetrics_FullMethodName    = "/execenv.MetricService/ListMetrics"
+	MetricService_AddMetric_FullMethodName       = "/execenv.MetricService/AddMetric"
+	MetricService_BatchAddMetrics_FullMethodName = "/execenv.MetricService/BatchAddMetrics"
+	MetricService_GetMetric_FullMethodName       = "/execenv.MetricService/GetMetric"
+	MetricService_ListMetrics_FullMethodName     = "/execenv.MetricService/ListMetrics"
 )
 
 // MetricServiceClient is the client API for MetricService service.
@@ -30,7 +30,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MetricServiceClient interface {
 	AddMetric(ctx context.Context, in *AddMetricRequest, opts ...grpc.CallOption) (*AddMetricResponse, error)
-	BatchAddMetric(ctx context.Context, in *BatchAddMetricRequest, opts ...grpc.CallOption) (*BatchAddMetricResponse, error)
+	BatchAddMetrics(ctx context.Context, in *BatchAddMetricsRequest, opts ...grpc.CallOption) (*BatchAddMetricsResponse, error)
 	GetMetric(ctx context.Context, in *GetMetricRequest, opts ...grpc.CallOption) (*GetMetricResponse, error)
 	ListMetrics(ctx context.Context, in *ListMetricsRequest, opts ...grpc.CallOption) (*ListMetricsResponse, error)
 }
@@ -53,10 +53,10 @@ func (c *metricServiceClient) AddMetric(ctx context.Context, in *AddMetricReques
 	return out, nil
 }
 
-func (c *metricServiceClient) BatchAddMetric(ctx context.Context, in *BatchAddMetricRequest, opts ...grpc.CallOption) (*BatchAddMetricResponse, error) {
+func (c *metricServiceClient) BatchAddMetrics(ctx context.Context, in *BatchAddMetricsRequest, opts ...grpc.CallOption) (*BatchAddMetricsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(BatchAddMetricResponse)
-	err := c.cc.Invoke(ctx, MetricService_BatchAddMetric_FullMethodName, in, out, cOpts...)
+	out := new(BatchAddMetricsResponse)
+	err := c.cc.Invoke(ctx, MetricService_BatchAddMetrics_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func (c *metricServiceClient) ListMetrics(ctx context.Context, in *ListMetricsRe
 // for forward compatibility.
 type MetricServiceServer interface {
 	AddMetric(context.Context, *AddMetricRequest) (*AddMetricResponse, error)
-	BatchAddMetric(context.Context, *BatchAddMetricRequest) (*BatchAddMetricResponse, error)
+	BatchAddMetrics(context.Context, *BatchAddMetricsRequest) (*BatchAddMetricsResponse, error)
 	GetMetric(context.Context, *GetMetricRequest) (*GetMetricResponse, error)
 	ListMetrics(context.Context, *ListMetricsRequest) (*ListMetricsResponse, error)
 	mustEmbedUnimplementedMetricServiceServer()
@@ -104,8 +104,8 @@ type UnimplementedMetricServiceServer struct{}
 func (UnimplementedMetricServiceServer) AddMetric(context.Context, *AddMetricRequest) (*AddMetricResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddMetric not implemented")
 }
-func (UnimplementedMetricServiceServer) BatchAddMetric(context.Context, *BatchAddMetricRequest) (*BatchAddMetricResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method BatchAddMetric not implemented")
+func (UnimplementedMetricServiceServer) BatchAddMetrics(context.Context, *BatchAddMetricsRequest) (*BatchAddMetricsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BatchAddMetrics not implemented")
 }
 func (UnimplementedMetricServiceServer) GetMetric(context.Context, *GetMetricRequest) (*GetMetricResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetMetric not implemented")
@@ -152,20 +152,20 @@ func _MetricService_AddMetric_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _MetricService_BatchAddMetric_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BatchAddMetricRequest)
+func _MetricService_BatchAddMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchAddMetricsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MetricServiceServer).BatchAddMetric(ctx, in)
+		return srv.(MetricServiceServer).BatchAddMetrics(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: MetricService_BatchAddMetric_FullMethodName,
+		FullMethod: MetricService_BatchAddMetrics_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MetricServiceServer).BatchAddMetric(ctx, req.(*BatchAddMetricRequest))
+		return srv.(MetricServiceServer).BatchAddMetrics(ctx, req.(*BatchAddMetricsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -218,8 +218,8 @@ var MetricService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _MetricService_AddMetric_Handler,
 		},
 		{
-			MethodName: "BatchAddMetric",
-			Handler:    _MetricService_BatchAddMetric_Handler,
+			MethodName: "BatchAddMetrics",
+			Handler:    _MetricService_BatchAddMetrics_Handler,
 		},
 		{
 			MethodName: "GetMetric",

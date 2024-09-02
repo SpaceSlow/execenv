@@ -68,6 +68,29 @@ func (s *MetricServiceServer) AddMetric(ctx context.Context, in *pb.AddMetricReq
 	return &response, nil
 }
 
+// BatchAddMetrics реализует интерфейс добавления нескольких метрик.
+func (s *MetricServiceServer) BatchAddMetrics(ctx context.Context, in *pb.BatchAddMetricsRequest) (*pb.BatchAddMetricsResponse, error) {
+	var response pb.BatchAddMetricsResponse
+
+	metricSlice := make([]metrics.Metric, 0, len(in.Metrics))
+
+	for _, metric := range in.Metrics {
+		m, err := convertFromProto(metric)
+		if err != nil {
+			response.Error = err.Error()
+			return &response, nil
+		}
+		metricSlice = append(metricSlice, *m)
+	}
+
+	err := s.storage.Batch(metricSlice)
+	if err != nil {
+		response.Error = err.Error()
+	}
+
+	return &response, nil
+}
+
 // GetMetric реализует интерфейс получения метрики.
 func (s *MetricServiceServer) GetMetric(ctx context.Context, in *pb.GetMetricRequest) (*pb.GetMetricResponse, error) {
 	var (

@@ -25,12 +25,11 @@ message AddMetricResponse {
   string error = 1;
 }
 
-
-message BatchAddMetricRequest {
+message BatchAddMetricsRequest {
   repeated Metric metrics = 1;
 }
 
-message BatchAddMetricResponse {
+message BatchAddMetricsResponse {
   string error = 1;
 }
 
@@ -54,7 +53,7 @@ message ListMetricsResponse {
 
 service MetricService {
   rpc AddMetric(AddMetricRequest) returns (AddMetricResponse);
-  rpc BatchAddMetric(BatchAddMetricRequest) returns (BatchAddMetricResponse);
+  rpc BatchAddMetrics(BatchAddMetricsRequest) returns (BatchAddMetricsResponse);
   rpc GetMetric(GetMetricRequest) returns (GetMetricResponse);
   rpc ListMetrics(ListMetricsRequest) returns (ListMetricsResponse);
 }
