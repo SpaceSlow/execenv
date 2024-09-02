@@ -55,7 +55,7 @@ type MetricServiceServer struct {
 func (s *MetricServiceServer) AddMetric(ctx context.Context, in *pb.AddMetricRequest) (*pb.AddMetricResponse, error) {
 	var response pb.AddMetricResponse
 
-	metric, err := convert(in.Metric)
+	metric, err := convertFromProto(in.Metric)
 	if err != nil {
 		response.Error = err.Error()
 		return &response, nil
@@ -68,7 +68,36 @@ func (s *MetricServiceServer) AddMetric(ctx context.Context, in *pb.AddMetricReq
 	return &response, nil
 }
 
-func convert(m *pb.Metric) (*metrics.Metric, error) {
+// GetMetric реализует интерфейс получения метрики.
+func (s *MetricServiceServer) GetMetric(ctx context.Context, in *pb.GetMetricRequest) (*pb.GetMetricResponse, error) {
+	var (
+		response pb.GetMetricResponse
+		metric   *metrics.Metric
+		ok       bool
+	)
+
+	switch in.MType {
+	case pb.MType_COUNTER:
+		metric, ok = s.storage.Get(metrics.Counter, in.Id)
+	case pb.MType_GAUGE:
+		metric, ok = s.storage.Get(metrics.Gauge, in.Id)
+	default:
+		metric, ok = nil, false
+	}
+
+	if !ok {
+		// TODO not found metric
+	}
+	var err error
+	response.Metric, err = convertToProto(metric)
+	if err != nil {
+		response.Error = err.Error()
+	}
+
+	return &response, nil
+}
+
+func convertFromProto(m *pb.Metric) (*metrics.Metric, error) {
 	metric := &metrics.Metric{
 		Name: m.Id,
 	}
@@ -80,6 +109,32 @@ func convert(m *pb.Metric) (*metrics.Metric, error) {
 	case pb.MType_GAUGE:
 		metric.Type = metrics.Gauge
 		metric.Value = m.Value
+	default:
+		return nil, metrics.ErrIncorrectMetricTypeOrValue
+	}
+	return metric, nil
+}
+
+func convertToProto(m *metrics.Metric) (*pb.Metric, error) {
+	metric := &pb.Metric{
+		Id: m.Name,
+	}
+
+	switch m.Type {
+	case metrics.Counter:
+		metric.MType = pb.MType_COUNTER
+		delta, ok := m.Value.(int64)
+		if !ok {
+			return nil, metrics.ErrIncorrectMetricTypeOrValue
+		}
+		metric.Delta = delta
+	case metrics.Gauge:
+		metric.MType = pb.MType_GAUGE
+		value, ok := m.Value.(float64)
+		if !ok {
+			return nil, metrics.ErrIncorrectMetricTypeOrValue
+		}
+		metric.Value = value
 	default:
 		return nil, metrics.ErrIncorrectMetricTypeOrValue
 	}
