@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"github.com/SpaceSlow/execenv/internal/interceptors"
 	"log"
 	"net"
 
@@ -24,7 +25,7 @@ func newGrpcStrategy(address string, storage storages.MetricStorage) *grpcStrate
 	if err != nil {
 		log.Fatal(err) // ?
 	}
-	s := grpc.NewServer()
+	s := grpc.NewServer(grpc.UnaryInterceptor(interceptors.LogUnaryInterceptor))
 	pb.RegisterMetricServiceServer(s, &MetricServiceServer{storage: storage})
 
 	runner := &grpcStrategy{
