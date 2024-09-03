@@ -15,6 +15,8 @@ import (
 	"github.com/SpaceSlow/execenv/internal/utils"
 )
 
+var _ Sender = (*httpSender)(nil)
+
 type httpSender struct {
 	url  string
 	cert *rsa.PublicKey

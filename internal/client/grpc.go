@@ -14,6 +14,8 @@ import (
 	"github.com/SpaceSlow/execenv/internal/utils"
 )
 
+var _ Sender = (*grpcSender)(nil)
+
 type grpcSender struct {
 	addr string
 }
