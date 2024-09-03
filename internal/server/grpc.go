@@ -2,12 +2,12 @@ package server
 
 import (
 	"context"
-	"github.com/SpaceSlow/execenv/internal/interceptors"
 	"log"
 	"net"
 
 	"google.golang.org/grpc"
 
+	"github.com/SpaceSlow/execenv/internal/interceptors"
 	"github.com/SpaceSlow/execenv/internal/metrics"
 	pb "github.com/SpaceSlow/execenv/internal/proto"
 	"github.com/SpaceSlow/execenv/internal/storages"
@@ -61,7 +61,7 @@ type MetricServiceServer struct {
 func (s *MetricServiceServer) AddMetric(ctx context.Context, in *pb.AddMetricRequest) (*pb.AddMetricResponse, error) {
 	var response pb.AddMetricResponse
 
-	metric, err := convertFromProto(in.Metric)
+	metric, err := pb.ConvertFromProto(in.Metric)
 	if err != nil {
 		response.Error = err.Error()
 		return &response, nil
@@ -81,7 +81,7 @@ func (s *MetricServiceServer) BatchAddMetrics(ctx context.Context, in *pb.BatchA
 	metricSlice := make([]metrics.Metric, 0, len(in.Metrics))
 
 	for _, metric := range in.Metrics {
-		m, err := convertFromProto(metric)
+		m, err := pb.ConvertFromProto(metric)
 		if err != nil {
 			response.Error = err.Error()
 			return &response, nil
@@ -118,7 +118,7 @@ func (s *MetricServiceServer) GetMetric(ctx context.Context, in *pb.GetMetricReq
 		// TODO not found metric
 	}
 	var err error
-	response.Metric, err = convertToProto(metric)
+	response.Metric, err = pb.ConvertToProto(metric)
 	if err != nil {
 		response.Error = err.Error()
 	}
@@ -133,53 +133,9 @@ func (s *MetricServiceServer) ListMetrics(ctx context.Context, in *pb.ListMetric
 	metricSlice := s.storage.List()
 	response.Metrics = make([]*pb.Metric, 0, len(metricSlice))
 	for _, metric := range metricSlice {
-		m, _ := convertToProto(&metric)
+		m, _ := pb.ConvertToProto(&metric)
 		response.Metrics = append(response.Metrics, m)
 	}
 
 	return &response, nil
-}
-
-func convertFromProto(m *pb.Metric) (*metrics.Metric, error) {
-	metric := &metrics.Metric{
-		Name: m.Id,
-	}
-
-	switch m.MType {
-	case pb.MType_COUNTER:
-		metric.Type = metrics.Counter
-		metric.Value = m.Delta
-	case pb.MType_GAUGE:
-		metric.Type = metrics.Gauge
-		metric.Value = m.Value
-	default:
-		return nil, metrics.ErrIncorrectMetricTypeOrValue
-	}
-	return metric, nil
-}
-
-func convertToProto(m *metrics.Metric) (*pb.Metric, error) {
-	metric := &pb.Metric{
-		Id: m.Name,
-	}
-
-	switch m.Type {
-	case metrics.Counter:
-		metric.MType = pb.MType_COUNTER
-		delta, ok := m.Value.(int64)
-		if !ok {
-			return nil, metrics.ErrIncorrectMetricTypeOrValue
-		}
-		metric.Delta = delta
-	case metrics.Gauge:
-		metric.MType = pb.MType_GAUGE
-		value, ok := m.Value.(float64)
-		if !ok {
-			return nil, metrics.ErrIncorrectMetricTypeOrValue
-		}
-		metric.Value = value
-	default:
-		return nil, metrics.ErrIncorrectMetricTypeOrValue
-	}
-	return metric, nil
 }
