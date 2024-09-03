@@ -19,7 +19,7 @@ func NewClient() (*Client, error) {
 	if cfg.UsedGRPCAgent {
 		sender, err = newGrpcSender()
 	} else {
-		sender, err = newHttpSender()
+		sender, err = newHTTPSender()
 	}
 	if err != nil {
 		return nil, err

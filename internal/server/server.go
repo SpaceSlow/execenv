@@ -116,5 +116,5 @@ func (s *Server) setStrategy() {
 		s.serverStrategy = newGrpcStrategy(s.config.ServerAddr.String(), s.storage)
 		return
 	}
-	s.serverStrategy = newHttpStrategy(s.config.ServerAddr.String(), s.storage)
+	s.serverStrategy = newHTTPStrategy(s.config.ServerAddr.String(), s.storage)
 }

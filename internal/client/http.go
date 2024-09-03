@@ -22,7 +22,7 @@ type httpSender struct {
 	cert *rsa.PublicKey
 }
 
-func newHttpSender() (*httpSender, error) {
+func newHTTPSender() (*httpSender, error) {
 	cfg, err := config.GetAgentConfig()
 	if err != nil {
 		return nil, err

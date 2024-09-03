@@ -17,7 +17,7 @@ type httpStrategy struct {
 	storage storages.MetricStorage
 }
 
-func newHttpStrategy(address string, storage storages.MetricStorage) *httpStrategy {
+func newHTTPStrategy(address string, storage storages.MetricStorage) *httpStrategy {
 	runner := &httpStrategy{
 		srv: &http.Server{
 			Addr: address,
