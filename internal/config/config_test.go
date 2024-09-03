@@ -436,17 +436,6 @@ func Test_getAgentConfigWithFlags(t *testing.T) {
 	}
 }
 
-var standardFlags = AgentConfig{
-	ServerAddr: NetAddress{
-		Host: "localhost",
-		Port: 8080,
-	},
-	ReportInterval: Duration{10 * time.Second},
-	PollInterval:   Duration{2 * time.Second},
-	RateLimit:      1,
-	Key:            "",
-}
-
 func TestAgentConfig_parseFlags(t *testing.T) {
 	tests := []struct {
 		args    []string
@@ -457,11 +446,12 @@ func TestAgentConfig_parseFlags(t *testing.T) {
 			name: "checking standard flag values",
 			args: nil,
 			wantCfg: AgentConfig{
-				ServerAddr:     standardFlags.ServerAddr,
-				ReportInterval: standardFlags.ReportInterval,
-				PollInterval:   standardFlags.PollInterval,
-				RateLimit:      standardFlags.RateLimit,
-				Key:            standardFlags.Key,
+				ServerAddr:     defaultAgentConfig.ServerAddr,
+				ReportInterval: defaultAgentConfig.ReportInterval,
+				PollInterval:   defaultAgentConfig.PollInterval,
+				RateLimit:      defaultAgentConfig.RateLimit,
+				Key:            defaultAgentConfig.Key,
+				UsedGRPCAgent:  defaultAgentConfig.UsedGRPCAgent,
 			},
 		},
 		{
@@ -474,10 +464,11 @@ func TestAgentConfig_parseFlags(t *testing.T) {
 					Host: "",
 					Port: 8081,
 				},
-				ReportInterval: standardFlags.ReportInterval,
-				PollInterval:   standardFlags.PollInterval,
-				RateLimit:      standardFlags.RateLimit,
-				Key:            standardFlags.Key,
+				ReportInterval: defaultAgentConfig.ReportInterval,
+				PollInterval:   defaultAgentConfig.PollInterval,
+				RateLimit:      defaultAgentConfig.RateLimit,
+				Key:            defaultAgentConfig.Key,
+				UsedGRPCAgent:  defaultAgentConfig.UsedGRPCAgent,
 			},
 		},
 		{
@@ -486,11 +477,12 @@ func TestAgentConfig_parseFlags(t *testing.T) {
 				"-r=30s",
 			},
 			wantCfg: AgentConfig{
-				ServerAddr:     standardFlags.ServerAddr,
+				ServerAddr:     defaultAgentConfig.ServerAddr,
 				ReportInterval: Duration{30 * time.Second},
-				PollInterval:   standardFlags.PollInterval,
-				RateLimit:      standardFlags.RateLimit,
-				Key:            standardFlags.Key,
+				PollInterval:   defaultAgentConfig.PollInterval,
+				RateLimit:      defaultAgentConfig.RateLimit,
+				Key:            defaultAgentConfig.Key,
+				UsedGRPCAgent:  defaultAgentConfig.UsedGRPCAgent,
 			},
 		},
 		{
@@ -499,11 +491,12 @@ func TestAgentConfig_parseFlags(t *testing.T) {
 				"-p=2s",
 			},
 			wantCfg: AgentConfig{
-				ServerAddr:     standardFlags.ServerAddr,
-				ReportInterval: standardFlags.ReportInterval,
+				ServerAddr:     defaultAgentConfig.ServerAddr,
+				ReportInterval: defaultAgentConfig.ReportInterval,
 				PollInterval:   Duration{2 * time.Second},
-				RateLimit:      standardFlags.RateLimit,
-				Key:            standardFlags.Key,
+				RateLimit:      defaultAgentConfig.RateLimit,
+				Key:            defaultAgentConfig.Key,
+				UsedGRPCAgent:  defaultAgentConfig.UsedGRPCAgent,
 			},
 		},
 		{
@@ -512,11 +505,12 @@ func TestAgentConfig_parseFlags(t *testing.T) {
 				"-l=3",
 			},
 			wantCfg: AgentConfig{
-				ServerAddr:     standardFlags.ServerAddr,
-				ReportInterval: standardFlags.ReportInterval,
-				PollInterval:   standardFlags.PollInterval,
+				ServerAddr:     defaultAgentConfig.ServerAddr,
+				ReportInterval: defaultAgentConfig.ReportInterval,
+				PollInterval:   defaultAgentConfig.PollInterval,
 				RateLimit:      3,
-				Key:            standardFlags.Key,
+				Key:            defaultAgentConfig.Key,
+				UsedGRPCAgent:  defaultAgentConfig.UsedGRPCAgent,
 			},
 		},
 		{
@@ -525,11 +519,26 @@ func TestAgentConfig_parseFlags(t *testing.T) {
 				"-k=non-standard-key",
 			},
 			wantCfg: AgentConfig{
-				ServerAddr:     standardFlags.ServerAddr,
-				ReportInterval: standardFlags.ReportInterval,
-				PollInterval:   standardFlags.PollInterval,
-				RateLimit:      standardFlags.RateLimit,
+				ServerAddr:     defaultAgentConfig.ServerAddr,
+				ReportInterval: defaultAgentConfig.ReportInterval,
+				PollInterval:   defaultAgentConfig.PollInterval,
+				RateLimit:      defaultAgentConfig.RateLimit,
 				Key:            "non-standard-key",
+				UsedGRPCAgent:  defaultAgentConfig.UsedGRPCAgent,
+			},
+		},
+		{
+			name: "checking setting grpc mode flag",
+			args: []string{
+				"-grpc",
+			},
+			wantCfg: AgentConfig{
+				ServerAddr:     defaultAgentConfig.ServerAddr,
+				ReportInterval: defaultAgentConfig.ReportInterval,
+				PollInterval:   defaultAgentConfig.PollInterval,
+				RateLimit:      defaultAgentConfig.RateLimit,
+				Key:            defaultAgentConfig.Key,
+				UsedGRPCAgent:  true,
 			},
 		},
 		{
@@ -540,6 +549,7 @@ func TestAgentConfig_parseFlags(t *testing.T) {
 				"-r=5s",
 				"-p=1s",
 				"-k=non-standard-key",
+				"-grpc",
 			},
 			wantCfg: AgentConfig{
 				ServerAddr: NetAddress{
@@ -550,6 +560,7 @@ func TestAgentConfig_parseFlags(t *testing.T) {
 				PollInterval:   Duration{1 * time.Second},
 				RateLimit:      10,
 				Key:            "non-standard-key",
+				UsedGRPCAgent:  true,
 			},
 		},
 	}
@@ -567,6 +578,7 @@ func TestAgentConfig_parseFlags(t *testing.T) {
 			assert.Equalf(t, tt.wantCfg.PollInterval, config.PollInterval, `expected PollInterval: %v, got: %v`, tt.wantCfg.PollInterval, config.PollInterval)
 			assert.Equalf(t, tt.wantCfg.RateLimit, config.RateLimit, `expected RateLimit: %v, got: %v`, tt.wantCfg.RateLimit, config.RateLimit)
 			assert.Equalf(t, tt.wantCfg.Key, config.Key, `expected Key: "%v", got: "%v"`, tt.wantCfg.Key, config.Key)
+			assert.Equalf(t, tt.wantCfg.UsedGRPCAgent, config.UsedGRPCAgent, `expected UsedGRPCAgent: "%v", got: "%v"`, tt.wantCfg.UsedGRPCAgent, config.UsedGRPCAgent)
 		})
 	}
 }
@@ -601,7 +613,8 @@ func TestAgentConfig_parseFile(t *testing.T) {
 					"poll_interval": "1s",
 					"crypto_key": "/path/to/cert.pem",
 					"rate_limit": 4,
-					"key": "key"
+					"key": "key",
+					"grpc": true
 				}  
 			`),
 			expectedCfg: AgentConfig{
@@ -611,6 +624,7 @@ func TestAgentConfig_parseFile(t *testing.T) {
 				PollInterval:   Duration{time.Second},
 				RateLimit:      4,
 				ServerAddr:     NetAddress{Host: "localhost", Port: 8080},
+				UsedGRPCAgent:  true,
 			},
 			expectedErr: false,
 		},

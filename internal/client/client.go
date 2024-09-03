@@ -1,13 +1,26 @@
 package client
 
-import "github.com/SpaceSlow/execenv/internal/metrics"
+import (
+	"github.com/SpaceSlow/execenv/internal/config"
+	"github.com/SpaceSlow/execenv/internal/metrics"
+)
 
 type Client struct {
 	sender Sender
 }
 
 func NewClient() (*Client, error) {
-	sender, err := newHttpSender()
+	cfg, err := config.GetAgentConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	var sender Sender
+	if cfg.UsedGRPCAgent {
+		sender, err = newGrpcSender()
+	} else {
+		sender, err = newHttpSender()
+	}
 	if err != nil {
 		return nil, err
 	}

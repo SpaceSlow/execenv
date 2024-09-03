@@ -204,6 +204,7 @@ var defaultAgentConfig = AgentConfig{
 	Key:            "",
 	Delays:         []time.Duration{time.Second, 3 * time.Second, 5 * time.Second},
 	CertFile:       "",
+	UsedGRPCAgent:  false,
 }
 
 // AgentConfig структура для конфигурации агента сбора метрик.
@@ -217,6 +218,7 @@ type AgentConfig struct {
 	ReportInterval Duration        `env:"REPORT_INTERVAL" json:"report_interval"`
 	PollInterval   Duration        `env:"POLL_INTERVAL" json:"poll_interval"`
 	RateLimit      int             `env:"RATE_LIMIT" json:"rate_limit"`
+	UsedGRPCAgent  bool            `env:"GRPC" json:"grpc"`
 }
 
 func (c *AgentConfig) parseFlags(programName string, args []string) error {
@@ -228,6 +230,7 @@ func (c *AgentConfig) parseFlags(programName string, args []string) error {
 	flagSet.StringVar(&c.Key, "k", c.Key, "key for signing queries")
 	flagSet.IntVar(&c.RateLimit, "l", c.RateLimit, "rate limit outgoing requests to the server")
 	flagSet.StringVar(&c.CertFile, "crypto-key", c.CertFile, "path to cert file")
+	flagSet.BoolVar(&c.UsedGRPCAgent, "grpc", c.UsedGRPCAgent, "use grpc agent version (default false)")
 
 	err := flagSet.Parse(args)
 	if err != nil {
