@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"log"
 	"net"
 
@@ -115,7 +117,8 @@ func (s *MetricServiceServer) GetMetric(ctx context.Context, in *pb.GetMetricReq
 	}
 
 	if !ok {
-		// TODO not found metric
+		response.Error = status.Error(codes.NotFound, "").Error()
+		return &response, nil
 	}
 	var err error
 	response.Metric, err = pb.ConvertToProto(metric)
