@@ -10,6 +10,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/SpaceSlow/execenv/internal/metrics"
+	"github.com/SpaceSlow/execenv/internal/utils"
 )
 
 var (
@@ -42,7 +43,7 @@ func (db *RetryDB) QueryRowContext(ctx context.Context, query string, args ...an
 		rowCh <- row
 		return nil
 	}
-	<-metrics.RetryFunc(queryRowContext, db.delays)
+	<-utils.RetryFunc(queryRowContext, db.delays)
 
 	return <-rowCh
 }
@@ -66,7 +67,7 @@ func (db *RetryDB) ExecContext(ctx context.Context, query string, args ...any) (
 		resultCh <- res
 		return nil
 	}
-	err := <-metrics.RetryFunc(execContext, db.delays)
+	err := <-utils.RetryFunc(execContext, db.delays)
 
 	return <-resultCh, err
 }

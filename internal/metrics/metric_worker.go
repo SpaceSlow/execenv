@@ -19,6 +19,9 @@ import (
 
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/mem"
+
+	"github.com/SpaceSlow/execenv/internal/config"
+	"github.com/SpaceSlow/execenv/internal/utils"
 )
 
 // MetricWorkers служит для аккумуляции и отправки метрик на сервер, с заданным ключом.
@@ -34,25 +37,28 @@ type MetricWorkers struct {
 	pollCount atomic.Int64
 }
 
-func NewMetricWorkers(numWorkers int, localIP, url, key, certFile string, delays []time.Duration) (*MetricWorkers, error) {
-	var (
-		cert *rsa.PublicKey
-		err  error
-	)
-	if certFile != "" {
-		cert, err = getPublicKey(certFile)
+func NewMetricWorkers() (*MetricWorkers, error) {
+	var cert *rsa.PublicKey
+
+	cfg, err := config.GetAgentConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	if cfg.CertFile != "" {
+		cert, err = getPublicKey(cfg.CertFile)
 		if err != nil {
 			return nil, fmt.Errorf("extract public key from file error: %w", err)
 		}
 	}
 	return &MetricWorkers{
-		metricsForSend: make(chan []Metric, numWorkers),
-		errorsCh:       make(chan error, numWorkers),
-		localIP:        localIP,
-		url:            url,
-		key:            key,
+		metricsForSend: make(chan []Metric, cfg.RateLimit),
+		errorsCh:       make(chan error, cfg.RateLimit),
+		localIP:        cfg.LocalIP,
+		url:            "http://" + cfg.ServerAddr.String() + "/updates/",
+		key:            cfg.Key,
 		cert:           cert,
-		delays:         delays,
+		delays:         cfg.Delays,
 	}, nil
 }
 
@@ -71,7 +77,7 @@ func (mw *MetricWorkers) Send(metrics []Metric) {
 		hash = hex.EncodeToString(h.Sum(nil))
 	}
 
-	data, err = Compress(data)
+	data, err = utils.Compress(data)
 	if err != nil {
 		mw.errorsCh <- err
 		return
@@ -119,7 +125,7 @@ func (mw *MetricWorkers) Send(metrics []Metric) {
 		resCh <- res
 		return nil
 	}
-	err = <-RetryFunc(sendMetrics, mw.delays)
+	err = <-utils.RetryFunc(sendMetrics, mw.delays)
 
 	if err != nil {
 		mw.errorsCh <- err
@@ -133,7 +139,7 @@ func (mw *MetricWorkers) Poll(pollCh chan []Metric) {
 	metricSlice := make([]Metric, 0)
 	runtimeMetricsCh := mw.getRuntimeMetrics()
 	gopsutilMetricsCh := mw.getGopsutilMetrics()
-	for m := range fanIn(runtimeMetricsCh, gopsutilMetricsCh) {
+	for m := range FanIn(runtimeMetricsCh, gopsutilMetricsCh) {
 		metricSlice = append(metricSlice, m...)
 	}
 	metricSlice = append(

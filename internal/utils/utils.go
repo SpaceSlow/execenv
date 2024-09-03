@@ -1,11 +1,10 @@
-package metrics
+package utils
 
 import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
 	"net"
-	"sync"
 	"time"
 )
 
@@ -45,30 +44,6 @@ func Compress(data []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed compress data: %w", err)
 	}
 	return b.Bytes(), nil
-}
-
-func fanIn(chs ...chan []Metric) chan []Metric {
-	var wg sync.WaitGroup
-	outCh := make(chan []Metric)
-
-	output := func(c chan []Metric) {
-		for m := range c {
-			outCh <- m
-		}
-		wg.Done()
-	}
-
-	wg.Add(len(chs))
-	for _, c := range chs {
-		go output(c)
-	}
-
-	go func() {
-		wg.Wait()
-		close(outCh)
-	}()
-
-	return outCh
 }
 
 func OutboundIP(serverAddr string) (string, error) {

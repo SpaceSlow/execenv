@@ -8,14 +8,14 @@ import (
 	"errors"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMetricWorkers_Err(t *testing.T) {
-	mw, err := NewMetricWorkers(1, "", "", "", "", []time.Duration{})
+	cleanArgs()
+	mw, err := NewMetricWorkers()
 	require.NoError(t, err)
 	mw.errorsCh <- errors.New("some error")
 	mw.Close()
@@ -24,7 +24,8 @@ func TestMetricWorkers_Err(t *testing.T) {
 }
 
 func TestMetricWorkers_getGopsutilMetrics(t *testing.T) {
-	mw, err := NewMetricWorkers(1, "", "", "", "", []time.Duration{})
+	cleanArgs()
+	mw, err := NewMetricWorkers()
 	require.NoError(t, err)
 	metrics := <-mw.getGopsutilMetrics()
 	assert.Greater(t, len(metrics), 0)
@@ -35,7 +36,8 @@ func TestMetricWorkers_getGopsutilMetrics(t *testing.T) {
 }
 
 func TestMetricWorkers_getRuntimeMetrics(t *testing.T) {
-	mw, err := NewMetricWorkers(1, "", "", "", "", []time.Duration{})
+	cleanArgs()
+	mw, err := NewMetricWorkers()
 	require.NoError(t, err)
 	metrics := <-mw.getRuntimeMetrics()
 	assert.Greater(t, len(metrics), 0)
@@ -86,5 +88,8 @@ func Test_getPublicKey(t *testing.T) {
 	certificate, err = getPublicKey(f.Name()) // get public key from missing file
 	assert.Error(t, err)
 	assert.Nil(t, certificate)
+}
 
+func cleanArgs() {
+	os.Args = []string{"program"}
 }

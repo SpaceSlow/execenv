@@ -14,7 +14,7 @@ import (
 
 	"github.com/caarlos0/env"
 
-	"github.com/SpaceSlow/execenv/internal/metrics"
+	"github.com/SpaceSlow/execenv/internal/utils"
 )
 
 var (
@@ -268,7 +268,7 @@ func GetAgentConfig() (*AgentConfig, error) {
 	var err error
 	once.Do(func() {
 		agentConfig, err = getAgentConfig(os.Args[0], os.Args[1:])
-		agentConfig.LocalIP, err = metrics.OutboundIP(agentConfig.ServerAddr.String())
+		agentConfig.LocalIP, err = utils.OutboundIP(agentConfig.ServerAddr.String())
 	})
 	return agentConfig, err
 }

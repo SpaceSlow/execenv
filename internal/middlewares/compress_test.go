@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/SpaceSlow/execenv/internal/metrics"
+	"github.com/SpaceSlow/execenv/internal/utils"
 )
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890 ,.:"
@@ -109,7 +109,7 @@ func randStringBytes(n int) string {
 }
 
 func generateCompressRequest() *http.Request {
-	data, _ := metrics.Compress([]byte(randStringBytes(rand.Intn(500) + 500)))
+	data, _ := utils.Compress([]byte(randStringBytes(rand.Intn(500) + 500)))
 	req, _ := http.NewRequest([]string{http.MethodGet, http.MethodPost}[rand.Intn(2)], "https://example.com", bytes.NewReader(data))
 	req.Header.Add("Content-Encoding", CompressionAlgorithm)
 	return req
