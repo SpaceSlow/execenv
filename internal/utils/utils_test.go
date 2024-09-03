@@ -1,6 +1,11 @@
 package utils
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -60,4 +65,47 @@ Omnis cupiditate tempore sit corporis nam et tempore a.
 			assert.Less(t, len(got), len(tt.data))
 		})
 	}
+}
+
+func TestGetPublicKey(t *testing.T) {
+	f, err := os.CreateTemp(t.TempDir(), "certificate.*.pem")
+	require.NoError(t, err)
+	defer os.Remove(f.Name())
+	certificate, err := GetPublicKey(f.Name()) // getting empty certificate
+	require.ErrorIs(t, err, ErrDecodePEMBlock)
+	assert.Nil(t, certificate)
+
+	err = writeRandomCertificateToFile(f.Name())
+	require.NoError(t, err)
+
+	certificate, err = GetPublicKey(f.Name()) // get valid public key
+	require.NoError(t, err)
+
+	assert.NotNil(t, certificate)
+	switch interface{}(certificate).(type) {
+	case *rsa.PublicKey:
+	default:
+		t.Errorf("incorrect type, expected *rsa.PublicKey, got: %T", certificate)
+	}
+	err = os.Remove(f.Name())
+	require.NoError(t, err)
+
+	certificate, err = GetPublicKey(f.Name()) // get public key from missing file
+	assert.Error(t, err)
+	assert.Nil(t, certificate)
+}
+
+func writeRandomCertificateToFile(filename string) error {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	if err != nil {
+		return err
+	}
+	publicKeyBytes := x509.MarshalPKCS1PublicKey(&privateKey.PublicKey)
+	block := &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: publicKeyBytes,
+	}
+	pemPublicKey := pem.EncodeToMemory(block)
+
+	return os.WriteFile(filename, pemPublicKey, 0600)
 }

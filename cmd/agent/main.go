@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/SpaceSlow/execenv/internal/worker"
 	"log"
 	"os"
 	"os/signal"
@@ -20,7 +21,7 @@ func main() {
 
 	pollTick := time.Tick(cfg.PollInterval.Duration)
 	reportTick := time.Tick(cfg.ReportInterval.Duration)
-	metricWorkers, err := metrics.NewMetricWorkers()
+	metricWorkers, err := worker.NewMetricWorkers()
 	if err != nil {
 		log.Fatalf("stopped agent: %s", err)
 	}

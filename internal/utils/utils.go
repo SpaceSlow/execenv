@@ -3,8 +3,12 @@ package utils
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"net"
+	"os"
 	"time"
 )
 
@@ -56,4 +60,16 @@ func OutboundIP(serverAddr string) (string, error) {
 	localAddr := conn.LocalAddr().(*net.TCPAddr)
 
 	return localAddr.IP.String(), nil
+}
+
+func GetPublicKey(file string) (*rsa.PublicKey, error) {
+	certBytes, err := os.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+	certBlock, _ := pem.Decode(certBytes)
+	if certBlock == nil {
+		return nil, ErrDecodePEMBlock
+	}
+	return x509.ParsePKCS1PublicKey(certBlock.Bytes)
 }

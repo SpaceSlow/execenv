@@ -1,132 +1,44 @@
-package metrics
+package worker
 
 import (
-	"bytes"
-	crand "crypto/rand"
-	"crypto/rsa"
-	"crypto/sha256"
-	"crypto/x509"
-	"encoding/hex"
-	"encoding/json"
-	"encoding/pem"
-	"fmt"
-	"math/rand"
-	"net/http"
-	"os"
-	"runtime"
-	"sync/atomic"
-	"time"
-
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/mem"
+	"math/rand"
+	"runtime"
+	"sync/atomic"
 
+	"github.com/SpaceSlow/execenv/internal/client"
 	"github.com/SpaceSlow/execenv/internal/config"
-	"github.com/SpaceSlow/execenv/internal/utils"
+	"github.com/SpaceSlow/execenv/internal/metrics"
 )
 
 // MetricWorkers служит для аккумуляции и отправки метрик на сервер, с заданным ключом.
 type MetricWorkers struct {
-	metricsForSend chan []Metric
-	errorsCh       chan error
+	errorsCh chan error
 
-	localIP   string
-	url       string
-	key       string
-	cert      *rsa.PublicKey
-	delays    []time.Duration
+	client    *client.Client
 	pollCount atomic.Int64
 }
 
 func NewMetricWorkers() (*MetricWorkers, error) {
-	var cert *rsa.PublicKey
-
 	cfg, err := config.GetAgentConfig()
 	if err != nil {
 		return nil, err
 	}
-
-	if cfg.CertFile != "" {
-		cert, err = getPublicKey(cfg.CertFile)
-		if err != nil {
-			return nil, fmt.Errorf("extract public key from file error: %w", err)
-		}
+	client, err := client.NewClient()
+	if err != nil {
+		return nil, err
 	}
 	return &MetricWorkers{
-		metricsForSend: make(chan []Metric, cfg.RateLimit),
-		errorsCh:       make(chan error, cfg.RateLimit),
-		localIP:        cfg.LocalIP,
-		url:            "http://" + cfg.ServerAddr.String() + "/updates/",
-		key:            cfg.Key,
-		cert:           cert,
-		delays:         cfg.Delays,
+		client:   client,
+		errorsCh: make(chan error, cfg.RateLimit),
 	}, nil
 }
 
-func (mw *MetricWorkers) Send(metrics []Metric) {
+func (mw *MetricWorkers) Send(metrics []metrics.Metric) {
 	pollCount := mw.pollCount.Load()
-	data, err := json.Marshal(metrics)
-	if err != nil {
-		mw.errorsCh <- err
-		return
-	}
 
-	var hash string
-	if mw.key != "" {
-		h := sha256.New()
-		h.Write(append(data, []byte(mw.key)...))
-		hash = hex.EncodeToString(h.Sum(nil))
-	}
-
-	data, err = utils.Compress(data)
-	if err != nil {
-		mw.errorsCh <- err
-		return
-	}
-
-	if mw.cert != nil {
-		data, err = rsa.EncryptPKCS1v15(crand.Reader, mw.cert, data)
-		if err != nil {
-			mw.errorsCh <- err
-			return
-		}
-	}
-
-	req, err := http.NewRequest(http.MethodPost, mw.url, bytes.NewReader(data))
-	if err != nil {
-		mw.errorsCh <- err
-		return
-	}
-	req.Header.Set("Content-Encoding", "gzip")
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Real-IP", mw.localIP)
-
-	if hash != "" {
-		req.Header.Set("Hash", hash)
-	}
-
-	resCh := make(chan *http.Response, 1)
-	defer close(resCh)
-	sendMetrics := func() error {
-		var res *http.Response
-		res, err = http.DefaultClient.Do(req)
-		if err != nil {
-			if len(resCh) > 0 {
-				<-resCh
-			}
-			resCh <- res
-			return err
-		}
-		if len(resCh) > 0 {
-			<-resCh
-		}
-		if err = res.Body.Close(); err != nil {
-			return err
-		}
-		resCh <- res
-		return nil
-	}
-	err = <-utils.RetryFunc(sendMetrics, mw.delays)
-
+	err := mw.client.Send(metrics)
 	if err != nil {
 		mw.errorsCh <- err
 		return
@@ -135,23 +47,23 @@ func (mw *MetricWorkers) Send(metrics []Metric) {
 	mw.errorsCh <- nil
 }
 
-func (mw *MetricWorkers) Poll(pollCh chan []Metric) {
-	metricSlice := make([]Metric, 0)
+func (mw *MetricWorkers) Poll(pollCh chan []metrics.Metric) {
+	metricSlice := make([]metrics.Metric, 0)
 	runtimeMetricsCh := mw.getRuntimeMetrics()
 	gopsutilMetricsCh := mw.getGopsutilMetrics()
-	for m := range FanIn(runtimeMetricsCh, gopsutilMetricsCh) {
+	for m := range metrics.FanIn(runtimeMetricsCh, gopsutilMetricsCh) {
 		metricSlice = append(metricSlice, m...)
 	}
 	metricSlice = append(
 		metricSlice,
-		Metric{
-			Type:  Gauge,
+		metrics.Metric{
+			Type:  metrics.Gauge,
 			Name:  "RandomValue",
 			Value: rand.Float64(),
 		},
 	)
-	metricSlice = append(metricSlice, Metric{
-		Type:  Counter,
+	metricSlice = append(metricSlice, metrics.Metric{
+		Type:  metrics.Counter,
 		Name:  "PollCount",
 		Value: mw.pollCount.Add(1),
 	})
@@ -170,27 +82,27 @@ func (mw *MetricWorkers) Err() chan error {
 	return mw.errorsCh
 }
 
-func (mw *MetricWorkers) getGopsutilMetrics() chan []Metric {
-	metricsCh := make(chan []Metric)
+func (mw *MetricWorkers) getGopsutilMetrics() chan []metrics.Metric {
+	metricsCh := make(chan []metrics.Metric)
 
 	go func() {
 		defer close(metricsCh)
 		v, _ := mem.VirtualMemory()
 		cpu, _ := cpu.Percent(0, false)
 
-		metrics := []Metric{
+		metrics := []metrics.Metric{
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "TotalMemory",
 				Value: float64(v.Total),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "FreeMemory",
 				Value: float64(v.Free),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "CPUtilization1",
 				Value: cpu[0],
 			},
@@ -201,152 +113,152 @@ func (mw *MetricWorkers) getGopsutilMetrics() chan []Metric {
 	return metricsCh
 }
 
-func (mw *MetricWorkers) getRuntimeMetrics() chan []Metric {
-	metricsCh := make(chan []Metric)
+func (mw *MetricWorkers) getRuntimeMetrics() chan []metrics.Metric {
+	metricsCh := make(chan []metrics.Metric)
 
 	go func() {
 		defer close(metricsCh)
 		var rtm runtime.MemStats
 		runtime.ReadMemStats(&rtm)
 
-		metrics := []Metric{
+		metrics := []metrics.Metric{
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "Alloc",
 				Value: float64(rtm.Alloc),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "BuckHashSys",
 				Value: float64(rtm.BuckHashSys),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "Frees",
 				Value: float64(rtm.Frees),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "GCCPUFraction",
 				Value: float64(rtm.GCCPUFraction),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "GCSys",
 				Value: float64(rtm.GCSys),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "HeapAlloc",
 				Value: float64(rtm.HeapAlloc),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "HeapIdle",
 				Value: float64(rtm.HeapIdle),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "HeapInuse",
 				Value: float64(rtm.HeapInuse),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "HeapObjects",
 				Value: float64(rtm.HeapObjects),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "HeapReleased",
 				Value: float64(rtm.HeapReleased),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "HeapSys",
 				Value: float64(rtm.HeapSys),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "LastGC",
 				Value: float64(rtm.LastGC),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "Lookups",
 				Value: float64(rtm.Lookups),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "MCacheInuse",
 				Value: float64(rtm.MCacheInuse),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "MCacheSys",
 				Value: float64(rtm.MCacheSys),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "MSpanInuse",
 				Value: float64(rtm.MSpanInuse),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "MSpanSys",
 				Value: float64(rtm.MSpanSys),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "Mallocs",
 				Value: float64(rtm.Mallocs),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "NextGC",
 				Value: float64(rtm.NextGC),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "NumForcedGC",
 				Value: float64(rtm.NumForcedGC),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "NumGC",
 				Value: float64(rtm.NumGC),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "OtherSys",
 				Value: float64(rtm.OtherSys),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "PauseTotalNs",
 				Value: float64(rtm.PauseTotalNs),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "StackInuse",
 				Value: float64(rtm.StackInuse),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "PauseTotalNs",
 				Value: float64(rtm.PauseTotalNs),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "StackSys",
 				Value: float64(rtm.StackSys),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "Sys",
 				Value: float64(rtm.Sys),
 			},
 			{
-				Type:  Gauge,
+				Type:  metrics.Gauge,
 				Name:  "TotalAlloc",
 				Value: float64(rtm.TotalAlloc),
 			},
@@ -355,16 +267,4 @@ func (mw *MetricWorkers) getRuntimeMetrics() chan []Metric {
 	}()
 
 	return metricsCh
-}
-
-func getPublicKey(file string) (*rsa.PublicKey, error) {
-	certBytes, err := os.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-	certBlock, _ := pem.Decode(certBytes)
-	if certBlock == nil {
-		return nil, ErrDecodePEMBlock
-	}
-	return x509.ParsePKCS1PublicKey(certBlock.Bytes)
 }
