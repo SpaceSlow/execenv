@@ -25,7 +25,12 @@ func newGrpcStrategy(address string, storage storages.MetricStorage) *grpcStrate
 	if err != nil {
 		log.Fatal(err) // ?
 	}
-	s := grpc.NewServer(grpc.UnaryInterceptor(interceptors.LogUnaryInterceptor))
+	s := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			interceptors.LogUnaryInterceptor,
+			interceptors.WithCheckingTrustedSubnetUnaryInterceptor,
+		),
+	)
 	pb.RegisterMetricServiceServer(s, &MetricServiceServer{storage: storage})
 
 	runner := &grpcStrategy{
