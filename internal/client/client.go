@@ -3,17 +3,17 @@ package client
 import "github.com/SpaceSlow/execenv/internal/metrics"
 
 type Client struct {
-	strategy Sender
+	sender Sender
 }
 
 func NewClient() (*Client, error) {
-	strategy, err := newHttpStrategy()
+	sender, err := newHttpSender()
 	if err != nil {
 		return nil, err
 	}
-	return &Client{strategy: strategy}, nil
+	return &Client{sender: sender}, nil
 }
 
 func (c *Client) Send(metrics []metrics.Metric) error {
-	return c.strategy.Send(metrics)
+	return c.sender.Send(metrics)
 }

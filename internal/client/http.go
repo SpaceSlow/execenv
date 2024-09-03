@@ -15,17 +15,17 @@ import (
 	"github.com/SpaceSlow/execenv/internal/utils"
 )
 
-type httpStrategy struct {
+type httpSender struct {
 	url  string
 	cert *rsa.PublicKey
 }
 
-func newHttpStrategy() (*httpStrategy, error) {
+func newHttpSender() (*httpSender, error) {
 	cfg, err := config.GetAgentConfig()
 	if err != nil {
 		return nil, err
 	}
-	s := &httpStrategy{
+	s := &httpSender{
 		url: "http://" + cfg.ServerAddr.String() + "/updates/",
 	}
 
@@ -39,7 +39,7 @@ func newHttpStrategy() (*httpStrategy, error) {
 	return s, nil
 }
 
-func (s *httpStrategy) Send(metrics []metrics.Metric) error {
+func (s *httpSender) Send(metrics []metrics.Metric) error {
 	cfg, err := config.GetAgentConfig()
 	if err != nil {
 		return err
