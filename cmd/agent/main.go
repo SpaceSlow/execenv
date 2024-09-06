@@ -1,14 +1,15 @@
 package main
 
 import (
+	"github.com/SpaceSlow/execenv/internal/worker"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/SpaceSlow/execenv/cmd/config"
-	"github.com/SpaceSlow/execenv/cmd/metrics"
+	"github.com/SpaceSlow/execenv/internal/config"
+	"github.com/SpaceSlow/execenv/internal/metrics"
 )
 
 func main() {
@@ -18,11 +19,9 @@ func main() {
 		log.Fatalf("stopped agent: %s", err)
 	}
 
-	url := "http://" + cfg.ServerAddr.String() + "/updates/"
-
 	pollTick := time.Tick(cfg.PollInterval.Duration)
 	reportTick := time.Tick(cfg.ReportInterval.Duration)
-	metricWorkers, err := metrics.NewMetricWorkers(cfg.RateLimit, url, cfg.Key, cfg.CertFile, cfg.Delays)
+	metricWorkers, err := worker.NewMetricWorkers()
 	if err != nil {
 		log.Fatalf("stopped agent: %s", err)
 	}
